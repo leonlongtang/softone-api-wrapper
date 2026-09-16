@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Personal notes vault (not part of the project)
+.obsidian/

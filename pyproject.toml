@@ -1,0 +1,23 @@
+[project]
+name = "softone-wrapper"
+version = "0.1.0"
+description = "SoftOne WS API wrapper (local project)"
+requires-python = ">=3.10"
+dependencies = [
+  "claude-agent-sdk",
+  "langchain",
+  "langchain-ollama",
+  "langchain-mcp-adapters",
+  "langgraph",
+  "tomli; python_version < '3.11'",
+]
+
+[tool.ruff]
+line-length = 110
+
+[tool.pytest.ini_options]
+# `mock_db` is a top-level package next to `tests/`; pytest needs the project
+# root on sys.path so `from mock_db.mock_ws import ...` resolves.
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers --showlocals"
