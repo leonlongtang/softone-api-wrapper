@@ -1,6 +1,18 @@
+"""Department agents: one AgentSpec per business area, each with a scoped tool allowlist."""
+
 from __future__ import annotations
 
-from agent_platform.agent_spec import AgentSpec
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class AgentSpec:
+    """A runtime-agnostic agent definition: prompt, allowed MCP tools, resources to read first."""
+
+    name: str
+    system_prompt: str
+    tool_names: tuple[str, ...] = ()
+    resource_uris: tuple[str, ...] = ()
 
 
 def ops_workflows_agent_spec() -> AgentSpec:

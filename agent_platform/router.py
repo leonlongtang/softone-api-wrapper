@@ -1,21 +1,6 @@
 from __future__ import annotations
 
 
-def simple_route(user_text: str) -> str:
-    """Very small deterministic router.
-
-    Replace later with an LLM router agent (still runtime-agnostic).
-    """
-    t = (user_text or "").lower()
-    if any(k in t for k in ("invoice", "payment", "paid", "refund")):
-        return "finance"
-    if any(k in t for k in ("stock", "inventory", "item", "sku", "warehouse")):
-        return "inventory"
-    if any(k in t for k in ("order", "customer", "quote", "sales")):
-        return "sales"
-    return "sales"
-
-
 def hybrid_route(user_text: str) -> str:
     """Hybrid deterministic router.
 
@@ -75,6 +60,4 @@ def clarify_question() -> str:
         "Reply with the exact action you want, plus any IDs/codes you already have."
     )
 
-
-__all__ = ["simple_route", "hybrid_route", "clarify_question"]
 

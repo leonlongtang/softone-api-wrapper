@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent_platform.orchestrator.router import hybrid_route
+from agent_platform.router import hybrid_route
 
 
 def test_hybrid_route_finance() -> None:

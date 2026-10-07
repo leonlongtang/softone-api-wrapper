@@ -1,21 +1,43 @@
+"""LangGraph orchestrator: route each turn, run the agent, recover or escalate on tool errors."""
+
 from __future__ import annotations
 
-import os
-from typing import Callable
+from dataclasses import dataclass
+from typing import Any, Callable, TypedDict
 
 from langgraph.constants import END, START
 from langgraph.graph.state import StateGraph
 
-from agent_platform.errors import ToolError
-from agent_platform.orchestrator.policy import RuntimePolicy
-from agent_platform.orchestrator.router import clarify_question, hybrid_route
-from agent_platform.orchestrator.artifacts import (
-    PENDING_USER_TEXT_KEY,
-    SESSION_ID_KEY,
-)
-from agent_platform.orchestrator.state import OrchestratorState
-from agent_platform.runtime.base import RunContext, RuntimeAdapter
+from agent_platform.router import clarify_question, hybrid_route
+from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import ops_workflows_agent_spec
+
+SESSION_ID_KEY = "session_id"
+PENDING_USER_TEXT_KEY = "pending_user_text"
+
+
+class OrchestratorState(TypedDict, total=False):
+    user_text: str
+    route: str
+    runtime: str
+    response: str
+    failures: int
+    # Cross-turn state: session_id, pending clarify text, conversation history.
+    artifacts: dict[str, Any]
+
+
+@dataclass(slots=True)
+class RuntimePolicy:
+    """Cost-aware runtime choice: run locally, escalate after N tool failures."""
+
+    default_runtime: str = "ollama"
+    escalation_runtime: str = "claude"
+    max_failures_before_escalate: int = 1
+
+    def choose(self, *, failures: int) -> str:
+        if failures >= self.max_failures_before_escalate:
+            return self.escalation_runtime
+        return self.default_runtime
 
 
 def _looks_like_session_error(err: dict) -> bool:
@@ -112,20 +134,13 @@ def build_orchestrator(
 
             # Ollama runtime raises ToolError on ok:false. Optionally escalate to Claude.
             state["failures"] = failures + 1
-            should_escalate = policy.choose(failures=state["failures"]) == "claude"
+            should_escalate = policy.choose(failures=state["failures"]) != runtime_name
 
             msg = str(te.error.get("message") or te)
             details = te.error.get("details")
             details_text = f"\nDetails: {details}" if details else ""
 
             if should_escalate:
-                if not (os.getenv("ANTHROPIC_API_KEY") or "").strip():
-                    state["response"] = (
-                        f"{msg}{details_text}\n\n"
-                        "Escalation to Claude is configured, but `ANTHROPIC_API_KEY` is not set. "
-                        "Set it in `.env` and retry if you want Claude-based recovery."
-                    )
-                    return state
                 # Rerun the *same user_text* using Claude. Note: Claude runtime must connect in its own MCP subprocess.
                 try:
                     text = await claude.run_turn(spec=spec, user_text=state.get("user_text") or "", context=RunContext())

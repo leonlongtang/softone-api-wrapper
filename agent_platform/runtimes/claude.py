@@ -1,9 +1,9 @@
+"""Claude Agent SDK runtime: Claude drives the same MCP tools in its own MCP subprocess."""
+
 from __future__ import annotations
 
 import os
-import sys
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
 from typing import Any
 
 from claude_agent_sdk import (
@@ -15,11 +15,17 @@ from claude_agent_sdk import (
     ToolUseBlock,
 )
 
-from agent_platform.agent_spec import AgentSpec
-from agent_platform.mcp_config import REPO_ROOT
+from agent_platform.mcp_tools import (
+    CONNECT_TOOL_NAME,
+    MCP_SERVER_NAME,
+    REPO_ROOT,
+    claude_allowed_tools_for_agent,
+    mcp_prefixed_tool_name,
+    mcp_server_params,
+)
 from agent_platform.prompting import PromptPolicy, build_system_prompt
-from agent_platform.runtime.base import RunContext, RuntimeAdapter
-from agent_platform.tool_registry import MCP_SERVER_NAME, claude_allowed_tools_for_agent, mcp_prefixed_tool_name
+from agent_platform.runtimes.base import RunContext, RuntimeAdapter
+from agent_platform.specs import AgentSpec
 
 
 @dataclass
@@ -33,8 +39,7 @@ class ClaudeSdkRuntime(RuntimeAdapter):
     """
 
     name: str = "claude"
-    repo_root: Path = REPO_ROOT
-    prompt_policy: PromptPolicy = PromptPolicy()
+    prompt_policy: PromptPolicy = field(default_factory=PromptPolicy)
 
     model: str | None = None
     fallback_model: str | None = None
@@ -57,7 +62,7 @@ class ClaudeSdkRuntime(RuntimeAdapter):
         # Claude should connect inside its own MCP process.
         session_instruction = (
             "SESSION\n"
-            f"- Start by calling `{mcp_prefixed_tool_name('softone_connect_default', server_name=MCP_SERVER_NAME)}`.\n"
+            f"- Start by calling `{mcp_prefixed_tool_name(CONNECT_TOOL_NAME)}`.\n"
             "- Capture the returned `session_id` and pass it to every subsequent tool call.\n"
             "- If a tool returns ok:false with an auth/session error, stop and report it."
         )
@@ -68,28 +73,19 @@ class ClaudeSdkRuntime(RuntimeAdapter):
             extra_resource_uris=spec.resource_uris,
         )
 
-        allowed = claude_allowed_tools_for_agent(spec.tool_names)
-        # If specs are misconfigured, fail safe: don't allow everything.
-        if not allowed:
-            allowed = [f"mcp__{MCP_SERVER_NAME}__softone_connect_default"]
-
+        params = mcp_server_params()
         return ClaudeAgentOptions(
-            cwd=str(self.repo_root),
+            cwd=str(REPO_ROOT),
             mcp_servers={
-                MCP_SERVER_NAME: {
-                    "type": "stdio",
-                    "command": sys.executable,
-                    "args": ["-m", "softone_mcp.server"],
-                    "env": {**os.environ},
-                }
+                MCP_SERVER_NAME: {"type": "stdio", "command": params["command"], "args": params["args"], "env": params["env"]}
             },
-            allowed_tools=allowed,
+            allowed_tools=claude_allowed_tools_for_agent(spec.tool_names),
             system_prompt=system_prompt,
             model=model,
             fallback_model=fallback_model,
         )
 
-    async def __aenter__(self) -> "ClaudeSdkRuntime":
+    async def __aenter__(self) -> ClaudeSdkRuntime:
         # Lazy; we open per call to keep behavior explicit.
         return self
 

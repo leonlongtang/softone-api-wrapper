@@ -1,29 +1,26 @@
+"""Ollama runtime: a local model driving MCP tools over one persistent MCP session."""
+
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
-import sys
-import asyncio
 import traceback
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 from contextlib import suppress
+from dataclasses import dataclass, field
+from typing import Any
 
-from agent_platform.agent_spec import AgentSpec
-from agent_platform.errors import ToolError
-from agent_platform.mcp_config import REPO_ROOT, softone_stdio_server_config
+from agent_platform.mcp_tools import CONNECT_TOOL_NAME, MCP_SERVER_NAME, mcp_server_params
 from agent_platform.prompting import PromptPolicy, build_system_prompt
-from agent_platform.runtime.base import RunContext, RuntimeAdapter
-from agent_platform.tool_registry import CONNECT_TOOL_NAME
-from agent_platform.orchestrator.artifacts import OLLAMA_HISTORY_KEY
-
-
-def _env_truthy(name: str) -> bool:
-    return (os.getenv(name) or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
+from agent_platform.specs import AgentSpec
 
 logger = logging.getLogger(__name__)
+
+HISTORY_KEY = "ollama_history"
+DEFAULT_MODEL = "qwen2.5:7b"
+
 
 def _env_int(name: str, default: int) -> int:
     raw = (os.getenv(name) or "").strip()
@@ -101,9 +98,8 @@ def _build_retry_question(tool_name: str, error: dict[str, Any]) -> str:
 def _wrap_tool(tool: Any, *, debug: bool) -> Any:
     """Preserve args_schema; normalize return value; raise ToolError on ok:false."""
 
-    # Lazy imports: avoid heavy dependency import at CLI startup.
-    from langchain_core.tools import StructuredTool  # noqa: WPS433
-    from langchain_core.tools.base import ToolException  # noqa: WPS433
+    from langchain_core.tools import StructuredTool
+    from langchain_core.tools.base import ToolException
 
     async def _call(**kwargs: Any) -> Any:
         # LLMs sometimes send explicit nulls; most MCP tool schemas model
@@ -192,55 +188,56 @@ async def _connect(raw_tools_by_name: dict[str, Any], *, debug: bool) -> str | N
     return None
 
 
+async def _check_ollama(model: str) -> None:
+    """Fail fast with an actionable message instead of a deep httpx traceback."""
+    import ollama
+
+    hint = "Or run with `--runtime claude` (needs ANTHROPIC_API_KEY)."
+    try:
+        await ollama.AsyncClient().show(model)
+    except ollama.ResponseError as exc:
+        if exc.status_code == 404:
+            raise RuntimeError(f"Ollama model `{model}` is not pulled. Run `ollama pull {model}`. {hint}") from exc
+        raise
+    except Exception as exc:  # connection refused surfaces as several exception types
+        raise RuntimeError(f"Ollama is not reachable ({exc}). Start it with `ollama serve`. {hint}") from exc
+
+
 @dataclass
 class OllamaRuntime(RuntimeAdapter):
     """Ollama runtime with a persistent MCP session."""
 
     name: str = "ollama"
-    repo_root: Path = REPO_ROOT
-    model: str = "qwen2.5:7b"
+    model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL") or DEFAULT_MODEL)
     debug: bool = False
-    prompt_policy: PromptPolicy = PromptPolicy()
+    prompt_policy: PromptPolicy = field(default_factory=PromptPolicy)
 
-    _client: MultiServerMCPClient | None = None
     _session_cm: Any | None = None
     _session: Any | None = None
     _raw_tools_by_name: dict[str, Any] | None = None
 
-    async def __aenter__(self) -> "OllamaRuntime":
-        # Lazy imports: avoid heavy dependency import at CLI startup.
-        from langchain_mcp_adapters.client import MultiServerMCPClient  # noqa: WPS433
-        from langchain_mcp_adapters.tools import load_mcp_tools  # noqa: WPS433
+    async def __aenter__(self) -> OllamaRuntime:
+        # Lazy imports keep CLI startup fast.
+        from langchain_mcp_adapters.client import MultiServerMCPClient
+        from langchain_mcp_adapters.tools import load_mcp_tools
 
+        await _check_ollama(self.model)
         startup_timeout_s = _env_int("OLLAMA_MCP_STARTUP_TIMEOUT_S", 20)
-        cfg = softone_stdio_server_config(repo_root=self.repo_root)
-        logger.info("[ollama_runtime] starting MCP server: %s %s (cwd=%s)", cfg.command, cfg.args, cfg.cwd)
-        self._client = MultiServerMCPClient(
-            {
-                cfg.name: {
-                    "transport": cfg.transport,
-                    "command": cfg.command,
-                    "args": cfg.args,
-                    "cwd": cfg.cwd,
-                    "env": cfg.env,
-                }
-            }
-        )
+        client = MultiServerMCPClient({MCP_SERVER_NAME: {"transport": "stdio", **mcp_server_params()}})
         # Hold one live MCP session for the entire runtime lifetime.
-        self._session_cm = self._client.session(cfg.name)
-        logger.info("[ollama_runtime] opening MCP session (timeout=%ss)", startup_timeout_s)
+        self._session_cm = client.session(MCP_SERVER_NAME)
+        logger.debug("[ollama_runtime] opening MCP session (timeout=%ss)", startup_timeout_s)
         self._session = await asyncio.wait_for(self._session_cm.__aenter__(), timeout=startup_timeout_s)
-        logger.info("[ollama_runtime] loading MCP tools (timeout=%ss)", startup_timeout_s)
+        logger.debug("[ollama_runtime] loading MCP tools (timeout=%ss)", startup_timeout_s)
         raw_tools = await asyncio.wait_for(load_mcp_tools(self._session), timeout=startup_timeout_s)
         self._raw_tools_by_name = {t.name: t for t in raw_tools}
-        logger.info("[ollama_runtime] loaded %s tools", len(self._raw_tools_by_name))
+        logger.debug("[ollama_runtime] loaded %s tools", len(self._raw_tools_by_name))
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
         if self._session_cm is not None:
             with suppress(Exception):
                 await self._session_cm.__aexit__(exc_type, exc, tb)
-        self._client = None
         self._session_cm = None
         self._session = None
         self._raw_tools_by_name = None
@@ -256,9 +253,8 @@ class OllamaRuntime(RuntimeAdapter):
             return
         raise RuntimeError("Startup connect failed (no session_id). Check SOFTONE_* configuration.")
 
-    def _build_system_message(self, *, spec: AgentSpec, session_id: str) -> SystemMessage:
-        # Lazy import.
-        from langchain_core.messages import SystemMessage  # noqa: WPS433
+    def _build_system_message(self, *, spec: AgentSpec, session_id: str) -> Any:
+        from langchain_core.messages import SystemMessage
 
         session_instruction = (
             "SESSION\n"
@@ -299,20 +295,19 @@ class OllamaRuntime(RuntimeAdapter):
         return [_wrap_tool(t, debug=self.debug) for t in raw_tools]
 
     async def run_turn(self, *, spec: AgentSpec, user_text: str, context: RunContext) -> str:
-        # Lazy imports: only pull these in when we actually run a turn.
-        from langchain.agents import create_agent  # noqa: WPS433
-        from langchain_core.messages import AIMessage, HumanMessage  # noqa: WPS433
-        from langchain_ollama import ChatOllama  # noqa: WPS433
+        from langchain.agents import create_agent
+        from langchain_core.messages import AIMessage, HumanMessage
+        from langchain_ollama import ChatOllama
 
         await self.ensure_connected(context)
         assert context.session_id
 
         # Keep per-agent chat history in the shared context.
-        history_by_agent = context.artifacts.setdefault(OLLAMA_HISTORY_KEY, {})
+        history_by_agent = context.artifacts.setdefault(HISTORY_KEY, {})
         messages: list[Any] = history_by_agent.get(spec.name) or [self._build_system_message(spec=spec, session_id=context.session_id)]
 
         tools = self._business_tools_for_spec(spec)
-        llm = ChatOllama(model=(os.getenv("OLLAMA_MODEL") or self.model))
+        llm = ChatOllama(model=self.model)
         agent = create_agent(llm, tools)
 
         messages.append(HumanMessage(content=user_text))

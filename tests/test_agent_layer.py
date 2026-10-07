@@ -8,12 +8,10 @@ import pytest
 # Agent-platform orchestrator depends on langgraph; skip these tests if not installed.
 pytest.importorskip("langgraph")
 
-from agent_core.prompting import PromptPolicy, build_system_prompt
-from agent_core.runtime.base import RunContext, RuntimeAdapter
-from agent_core.runtime.errors import ToolError
-from agent_core.tool_registry import CONNECT_TOOL_NAME, MCP_SERVER_NAME, claude_allowed_tools_for_agent
-from agent_platform.orchestrator.artifacts import SESSION_ID_KEY
-from agent_platform.orchestrator.graph import build_orchestrator
+from agent_platform.graph import SESSION_ID_KEY, RuntimePolicy, build_orchestrator
+from agent_platform.mcp_tools import CONNECT_TOOL_NAME, MCP_SERVER_NAME, claude_allowed_tools_for_agent
+from agent_platform.prompting import PromptPolicy, build_system_prompt
+from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import ops_workflows_agent_spec
 
 
@@ -89,12 +87,10 @@ def test_orchestrator_persists_session_id_for_ollama_runtime_only() -> None:
     assert ollama.ensured is True
 
     # Force Claude run; graph should not persist session_id for Claude.
-    from agent_core.orchestration.policy import RuntimePolicy
-
     app2 = build_orchestrator(
         ollama=ollama,
         claude=claude,
-        policy=RuntimePolicy(max_ollama_failures_before_escalate=0),
+        policy=RuntimePolicy(max_failures_before_escalate=0),
     )
     state2 = {"user_text": "create order", "failures": 0, "artifacts": {}}
     out2 = asyncio.run(app2.ainvoke(state2))  # type: ignore[attr-defined]

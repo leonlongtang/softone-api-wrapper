@@ -4,7 +4,7 @@ Use this checklist to validate the workflow-first agent client against the mock 
 
 ## Setup
 - Ensure `SOFTONE_*` env vars are set for mock mode as usual.
-- Run the CLI orchestrator REPL:\n+  - `python apps/cli_orchestrator/run.py`\n+
+- Run the CLI orchestrator REPL:\n+  - `python -m agent_platform`\n+
 ## Tests
 
 ### 1) Connect (implicit)

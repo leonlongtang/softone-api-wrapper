@@ -12,9 +12,9 @@ Branch `polish`, one commit per item, fast-forward merge on sign-off. This file 
 
 ## Checklist
 
-- [ ] **1. Install fixes.** Package config so `pip install -e .` works; declare `mcp`; pytest/ruff as a dev
+- [x] **1. Install fixes.** Package config so `pip install -e .` works; declare `mcp`; pytest/ruff as a dev
       group; empty `.env` values fall back to mock defaults; drop the duplicate `pytest.ini`.
-- [ ] **2. One package, one CLI.** Merge `agent_core/` into `agent_platform/` (delete the shims); delete
+- [x] **2. One package, one CLI.** Merge `agent_core/` into `agent_platform/` (delete the shims); delete
       `agent/`, `apps/` and `agent_platform/run.py`. Single entrypoint `python -m agent_platform` with
       `--runtime ollama|claude`; Claude escalation only when `ANTHROPIC_API_KEY` is set; a one-line hint
       when Ollama isn't running.
