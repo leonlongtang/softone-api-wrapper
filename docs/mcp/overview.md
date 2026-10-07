@@ -1,7 +1,5 @@
 # MCP overview (`softone_mcp`)
 
-Wiki-link target: `[[mcp_overview]]`
-
 The MCP server provides **tools** for agents to operate SoftOne ERP via the Python wrapper.
 
 ## Code locations
@@ -10,20 +8,17 @@ The MCP server provides **tools** for agents to operate SoftOne ERP via the Pyth
 - Domain tools: `softone_mcp/tools/` (`customers.py`, `items.py`, `orders.py`, `invoices.py`, `payments.py`, `connect.py`)
 - Tool / envelope audit: [`docs/mcp/tool_audit.md`](./tool_audit.md)
 - Full tool list and JSON examples: [`docs/mcp/tools_catalog.md`](./tools_catalog.md)
-- Backward-compatible entrypoint: `mcp_server.py` (exports `mcp`)
 
 ## Design: two tool layers
 
-### 1) Low-level tools (generic, “SoftOne primitives”)
+### 1) Raw SoftOne services (Python only)
 
-These map closely to SoftOne WS. They are flexible but more abstract. They may be exposed as separate MCP tools in some deployments; this repo’s default server focuses on domain tools below.
-
-- `softone_connect_default` (always registered)
-- `softone_getObjects`, `softone_getData`, `softone_setData`, `softone_delData`, etc. (when wired)
+The wrapper (`softone_wrapper.SoftOneClient`) exposes SoftOne WS services directly (`getData`, `setData`, `delData`, …).
+They are deliberately **not** MCP tools: agents only see the domain tools below, plus `softone_connect_default`.
 
 ### 2) Domain tools (agent-friendly)
 
-These encode a business intent and hide SoftOne payload structure. See the **Domain business tools** table in [`tools_catalog.md`](./tools_catalog.md) for the current tool names (`create_customer`, `get_order_lines`, `list_invoice_payments`, …).
+These encode a business intent and hide SoftOne payload structure. See the generated tool table in [`tools_catalog.md`](./tools_catalog.md) for the current tool names (`create_customer`, `get_order_lines`, `list_invoice_payments`, …).
 
 ## Configuration
 
@@ -62,10 +57,10 @@ Best practice:
 
 - For agent usage: always send JSON payloads (Inspector “Switch to JSON”).
 - For human testing in form mode: keep inputs simple (`str` with `""` defaults) where possible.
-- For `customers_create`, optional fields are implemented as empty strings (form-friendly).
+- For `create_customer`, optional fields are implemented as empty strings (form-friendly).
 
-## Agent prompt policy (for future multi-agent)
+## Agent prompt policy
 
-When you introduce dedicated agents, apply the baseline policy documented in:
+The department agents in `agent_platform/specs.py` follow the baseline policy documented in:
 - [`docs/agents/agent_prompt_policy.md`](../agents/agent_prompt_policy.md)
 

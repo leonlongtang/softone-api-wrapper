@@ -1,7 +1,5 @@
 # Order-to-cash workflow (agents)
 
-Wiki-link target: `[[order_to_cash]]`
-
 This workflow covers the core business lifecycle:
 
 Customer → Product/Item → Order → Invoice → Payment
@@ -25,8 +23,8 @@ Preferred (agent tool, future):
 - `get_customer(name_or_id)`
 
 Current tools (today):
-- Use `customers_create` to create
-- Use `customers_get` to fetch by id
+- Use `create_customer` to create
+- Use `get_customer` to fetch by id
 
 Example (create):
 
@@ -47,7 +45,7 @@ Preferred (agent tool, future):
 - `get_product(name_or_id)`
 
 Current tools (today):
-- Use `items_create` / `items_get`
+- Use `create_item` / `get_item`
 
 Example (create item):
 
@@ -61,7 +59,7 @@ Preferred (agent tool, future):
 - `create_order(customer_id, items)` where `items=[{product_id, quantity}]`
 
 Current tools (today):
-- Use `orders_create` (supports initial lines)
+- Use `create_order` (supports initial lines)
 - Or create header then manage lines with `orderitems_*`
 
 Example (create order with lines):
@@ -81,7 +79,7 @@ Example (create order with lines):
 ## 4) Adjust order lines (if needed)
 
 Current tools (today):
-- Use `orderitems_add_line`, `orderitems_remove_line`, or `orderitems_replace_lines`
+- Use `add_order_line` or `remove_order_line`
 
 Example (add a line):
 
@@ -100,7 +98,7 @@ Preferred (agent tool, future):
 - `create_invoice(order_id)` (pull order total, set unpaid)
 
 Current tools (today):
-- Use `invoices_create` and provide `customer_id`, `order_id`, and `amount`
+- Use `create_invoice` and provide `customer_id`, `order_id`, and `amount`
 
 Example:
 
@@ -114,7 +112,7 @@ Preferred (agent tool, future):
 - `record_payment(invoice_id, amount)`
 
 Current tools (today):
-- Use `payments_create`
+- Use `record_payment`
 
 Example:
 

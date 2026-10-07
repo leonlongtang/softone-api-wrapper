@@ -18,9 +18,10 @@ Branch `polish`, one commit per item, fast-forward merge on sign-off. This file 
       `agent/`, `apps/` and `agent_platform/run.py`. Single entrypoint `python -m agent_platform` with
       `--runtime ollama|claude`; Claude escalation only when `ANTHROPIC_API_KEY` is set; a one-line hint
       when Ollama isn't running.
-- [ ] **3. Remove clutter.** Delete `cursorrules.md`, `tools/`, `docs/TODO.md`, `mcp_server.py`,
+- [x] **3. Remove clutter.** Delete `cursorrules.md`, `tools/`, `docs/TODO.md`, `mcp_server.py`,
       `simple_route`, `ToolMeta`; move `softone.md` to `docs/`; drop Obsidian wording and ignore line;
-      `main.py` becomes a test; drop "V1/later" comments.
+      `main.py` becomes a test; drop "V1/later" comments. Docs: regenerate the stale tools catalog from the
+      live server (+ drift test), fix stale tool names, convert wiki-links.
 - [ ] **4. Real department routing.** Route -> sales/inventory/finance spec; delete `ops`, move workflow
       tools to sales; a clarify reply of `sales|inventory|finance` sends the original text there; one shared
       conversation history across departments; Claude runtime rebuilds its client when the spec changes.

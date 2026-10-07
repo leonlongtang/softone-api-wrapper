@@ -1,7 +1,5 @@
 # Order playbook (agents)
 
-Wiki-link target: `[[playbook_order]]`
-
 This playbook shows end-to-end order workflows using MCP tools.
 
 ## 0) Connect

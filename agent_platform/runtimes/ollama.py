@@ -107,7 +107,7 @@ def _wrap_tool(tool: Any, *, debug: bool) -> Any:
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
         if debug:
             logger.debug("[mcp] -> %s %s", tool.name, _short_json(kwargs))
-        # Retry policy (V1): retry connect + read-only tools once on transient exceptions.
+        # Retry connect + read-only tools once on transient exceptions; never retry writes.
         attempts = 0
         while True:
             try:

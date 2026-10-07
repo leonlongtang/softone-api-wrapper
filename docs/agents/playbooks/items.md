@@ -1,7 +1,5 @@
 # Items playbook (agents)
 
-Wiki-link target: `[[playbook_items]]`
-
 This playbook shows end-to-end item workflows using MCP tools.
 
 ## 0) Connect
@@ -50,7 +48,7 @@ Expected success shape:
 
 - In the mock backend, items are backed by the `items` table.
 
-## Optional
+## Search
 
-- Implement `items_list` / `items_search` if agents need discovery by code/name.
+- Use `search_items` to find an item by code/name before acting on it.
 

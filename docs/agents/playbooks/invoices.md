@@ -1,7 +1,5 @@
 # Invoices playbook (agents)
 
-Wiki-link target: `[[playbook_invoices]]`
-
 This playbook shows invoice workflows using MCP tools.
 
 ## 0) Connect

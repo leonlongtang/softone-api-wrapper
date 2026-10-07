@@ -1,7 +1,5 @@
 # Payments playbook (agents)
 
-Wiki-link target: `[[playbook_payments]]`
-
 This playbook shows payment workflows using MCP tools.
 
 ## 0) Connect

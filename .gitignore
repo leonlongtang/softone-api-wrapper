@@ -10,8 +10,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# Personal notes vault (not part of the project)
-.obsidian/
 
 # Mock DB is seeded on first use
 mock_db/mock_softone.db

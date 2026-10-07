@@ -12,7 +12,6 @@ from claude_agent_sdk import (
     ClaudeSDKClient,
     ResultMessage,
     TextBlock,
-    ToolUseBlock,
 )
 
 from agent_platform.mcp_tools import (
@@ -118,12 +117,8 @@ class ClaudeSdkRuntime(RuntimeAdapter):
         async for msg in client.receive_response():
             if isinstance(msg, AssistantMessage):
                 for block in msg.content:
-                    if isinstance(block, TextBlock):
+                    if isinstance(block, TextBlock):  # tool-use blocks stay out of user-facing text
                         chunks.append(block.text)
-                    elif isinstance(block, ToolUseBlock):
-                        # Keep tool calls out of the end-user text; runtimes may
-                        # implement structured logging later.
-                        continue
             elif isinstance(msg, ResultMessage):
                 # ResultMessage may contain a final short result string.
                 if msg.result:

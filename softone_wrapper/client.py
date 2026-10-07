@@ -183,7 +183,7 @@ class SoftOneClient:
         session_hours: Optional[int] = None,
     ) -> StartConnectionResult:
         """
-        Implements the flow documented in softone.md:
+        Implements the flow documented in docs/softone_ws_reference.md:
         - call `login`
         - if selection provided: returns final clientID directly (ready session)
         - else: returns selections + temporary clientID (needs `complete_connection`)

@@ -81,7 +81,7 @@ def login(
     db_path: Path = DEFAULT_DB_PATH,
     session_hours: int = 8,
 ) -> dict[str, Any]:
-    """Mimics the SoftOne WS `login` JSON response shape from softone.md.
+    """Mimics the SoftOne WS `login` JSON response shape from docs/softone_ws_reference.md.
 
     - If COMPANY/BRANCH/MODULE/REFID are NOT provided: returns temporary clientID + objs selections.
     - If they ARE provided (and match a seeded selection): returns final clientID only.
@@ -186,7 +186,7 @@ def authenticate(
     db_path: Path = DEFAULT_DB_PATH,
     session_hours: int = 8,
 ) -> dict[str, Any]:
-    """Mimics the SoftOne WS `authenticate` response shape from softone.md."""
+    """Mimics the SoftOne WS `authenticate` response shape from docs/softone_ws_reference.md."""
     now = _utc_now()
     expires = now + timedelta(hours=session_hours)
 

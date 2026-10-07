@@ -433,7 +433,7 @@ def seed(conn: sqlite3.Connection) -> SeedResult:
 def _print_quickstart(result: SeedResult) -> None:
     print(f"DB created at: {result.db_path}")
     print()
-    print("Mock credentials (from softone.md examples):")
+    print("Mock credentials (from docs/softone_ws_reference.md examples):")
     print(json.dumps(result.account, indent=2))
     print()
     print("Mock clientIDs:")

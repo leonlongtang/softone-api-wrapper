@@ -1,7 +1,5 @@
 # MCP domain tools — stack audit
 
-Wiki-link target: `[[mcp_tool_audit]]`
-
 This document records how domain MCP tools are structured and whether they are suitable for agent use without further refactors.
 
 ## Layer contract

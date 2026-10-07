@@ -1,7 +1,5 @@
 # API wrapper (`softone_wrapper`)
 
-Wiki-link target: `[[api_wrapper]]`
-
 This project wraps **SoftOne WS** calls behind a Python client with **stateful sessions**.
 
 ## Key files

@@ -9,7 +9,7 @@ class SoftOneError(Exception):
     """
     Domain-level error for SoftOne WS failures.
 
-    `code` corresponds to SoftOne's error codes when available (see softone.md).
+    `code` corresponds to SoftOne's error codes when available (see docs/softone_ws_reference.md).
     `details` may include raw response fragments for debugging.
     """
 

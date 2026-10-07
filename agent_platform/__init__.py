@@ -1,8 +1,7 @@
-"""Unified multi-runtime agent infrastructure (model-agnostic specs + runtimes).
+"""SoftOne agent platform: a LangGraph router in front of department agents that use SoftOne MCP tools.
 
-This package is intentionally runtime-agnostic:
-- Agents are defined once (AgentSpec).
-- Runtimes execute those specs (Ollama, Claude SDK, later others).
-- Orchestrators (LangGraph) route between AgentSpecs without knowing runtime details.
+- specs.py    department agents (sales / inventory / finance): prompt + scoped tool allowlist
+- router.py   deterministic keyword router, or "clarify" when ambiguous
+- graph.py    LangGraph orchestrator: route -> run agent -> recover / escalate
+- runtimes/   the same specs on Ollama (local) or the Claude Agent SDK
 """
-

@@ -1,7 +1,5 @@
 # Customer playbook (agents)
 
-Wiki-link target: `[[playbook_customer]]`
-
 This playbook shows end-to-end customer workflows using MCP tools.
 
 ## 0) Connect
@@ -20,7 +18,7 @@ Response:
 
 ## 1) Create a customer (agent-friendly)
 
-Use `customers_create` for most agent workflows.
+Use `create_customer` for most agent workflows.
 
 ```json
 {
@@ -43,7 +41,7 @@ Expected success shape:
 
 ## 2) Verify (agent-friendly)
 
-Use `customers_get` after create.
+Use `get_customer` after create.
 
 ```json
 {
@@ -55,21 +53,19 @@ Use `customers_get` after create.
 
 ## 3) Update a customer (low-level)
 
-Prefer `customers_update` for simple patches:
+Prefer `update_customer` for simple patches:
 
 ```json
 {
   "session_id": "...",
   "key": 50,
-  "remarks": "Updated via customers_update"
+  "remarks": "Updated via update_customer"
 }
 ```
 
-If you need to update complex tables/lines, fall back to `softone_setData`.
-
 ## 4) Delete a customer
 
-Prefer `customers_delete`:
+Prefer `delete_customer`:
 
 ```json
 {
