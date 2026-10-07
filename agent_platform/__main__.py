@@ -43,14 +43,20 @@ async def _chat(*, prompt: str, runtime: str, debug: bool) -> None:
         app = build_orchestrator(ollama=ollama, claude=claude, policy=policy)
         state: OrchestratorState = {"artifacts": {}}
 
-        async def turn(text: str) -> None:
+        async def turn(text: str) -> bool:
             nonlocal state
-            state["user_text"] = text
-            state = await app.ainvoke(state)
+            try:
+                state = await app.ainvoke({**state, "user_text": text})
+            except Exception as exc:  # noqa: BLE001 - a failed turn (e.g. model crash) shouldn't end the chat
+                logging.getLogger("agent_platform").debug("turn failed", exc_info=True)
+                print(f"\n[error] {type(exc).__name__}: {exc}")
+                return False
             print(f"\n[{state.get('route')} | {state.get('runtime')}] {state.get('response') or ''}")
+            return True
 
         if prompt.strip():
-            await turn(prompt.strip())
+            if not await turn(prompt.strip()):
+                raise SystemExit(1)
             return
 
         print("SoftOne agents (sales / inventory / finance). Type /exit to quit.")

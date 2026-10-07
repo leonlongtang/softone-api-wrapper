@@ -11,7 +11,7 @@ from .tools.items import register_item_tools
 from .tools.orders import register_order_tools
 from .tools.payments import register_payment_tools
 
-mcp = FastMCP()
+mcp = FastMCP("softone", log_level="WARNING")  # INFO logs every request to the client's stderr
 
 # One client per process (keeps wrapper's in-memory session store).
 client = build_client()
