@@ -54,7 +54,8 @@ class WriteGate:
         """Return None if the call may run, else a refusal message for the model."""
         if tool not in WRITE_TOOLS:
             return None
-        call = f"{tool}:{json.dumps(args, sort_keys=True, default=str)}"
+        intent = {k: v for k, v in args.items() if k != "session_id"}  # session ids are plumbing
+        call = f"{tool}:{json.dumps(intent, sort_keys=True, default=str)}"
         if call in self.ran:
             # Small models sometimes emit the same call twice in one turn; never write twice.
             return ALREADY_DONE.format(tool=tool)

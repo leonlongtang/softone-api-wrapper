@@ -113,6 +113,9 @@ def finance_agent_spec() -> AgentSpec:
             "- If an invoice is unpaid/partially paid, show the relevant status before recording a payment.\n"
         ),
         tool_names=(
+            # orders are read-only here: invoicing needs to see them
+            "get_order",
+            "list_orders",
             "create_invoice",
             "get_unpaid_invoices",
             "get_invoice",

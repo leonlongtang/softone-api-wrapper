@@ -26,7 +26,3 @@ def mcp_prefixed_tool_name(tool_name: str) -> str:
     """Convert an MCP tool name to the Claude Agent SDK namespace."""
     return f"mcp__{MCP_SERVER_NAME}__{tool_name}"
 
-
-def claude_allowed_tools_for_agent(tool_names: tuple[str, ...]) -> list[str]:
-    """Strict Claude SDK allowlist for an agent: connect + the agent's own tools."""
-    return [mcp_prefixed_tool_name(t) for t in dict.fromkeys((CONNECT_TOOL_NAME, *tool_names))]

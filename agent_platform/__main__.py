@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import logging
 import os
+import sys
 from contextlib import AsyncExitStack
 
 from config import load_dotenv
@@ -73,6 +74,8 @@ async def _chat(*, prompt: str, runtime: str, debug: bool) -> None:
 
 
 def main() -> None:
+    # A redirected stdout on Windows uses the locale code page; never crash on an emoji in a reply.
+    sys.stdout.reconfigure(errors="replace")
     load_dotenv()
     args = _parse_args()
     debug = args.debug or os.getenv("OLLAMA_MCP_DEBUG", "").strip().lower() in {"1", "true", "yes"}

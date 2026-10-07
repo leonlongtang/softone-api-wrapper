@@ -56,6 +56,15 @@ def test_duplicate_call_after_approval_never_writes_twice() -> None:
     assert not g.blocked  # a duplicate isn't presented as a new approval
 
 
+def test_session_id_is_not_part_of_call_identity() -> None:
+    g = WriteGate()
+    g.start_turn("pay")
+    g.check("record_payment", {"session_id": "A", "invoice_id": 2})
+    g.start_turn("yes")
+    assert g.check("record_payment", {"session_id": "A", "invoice_id": 2}) is None
+    assert "already ran" in g.check("record_payment", {"session_id": "B", "invoice_id": 2})
+
+
 def test_any_other_reply_clears_pending_approval() -> None:
     g = WriteGate()
     g.start_turn("create an order")
@@ -119,11 +128,12 @@ def test_claude_permission_callback_gates_writes_and_enforces_allowlist() -> Non
     from agent_platform.specs import SPECS
 
     runtime = ClaudeSdkRuntime()
-    can_use = runtime._permission_callback(SPECS["finance"])
+    runtime._spec = SPECS["finance"]
 
     def ask(tool: str) -> object:
-        return asyncio.run(can_use(tool, {"invoice_id": 1, "amount": 10}, None))
+        return asyncio.run(runtime._can_use_tool(tool, {"invoice_id": 1, "amount": 10}, None))
 
+    assert isinstance(ask(mcp("softone_connect_default")), PermissionResultAllow)
     assert isinstance(ask(mcp("get_invoice")), PermissionResultAllow)
     assert isinstance(ask(mcp("create_order")), PermissionResultDeny)  # sales tool, not finance's
     assert isinstance(ask("Bash"), PermissionResultDeny)
@@ -132,3 +142,6 @@ def test_claude_permission_callback_gates_writes_and_enforces_allowlist() -> Non
 
     runtime._gate.start_turn("yes")
     assert isinstance(ask(mcp("record_payment")), PermissionResultAllow)
+
+    runtime._spec = SPECS["sales"]  # department switch: same client, different allowlist
+    assert isinstance(ask(mcp("get_invoice")), PermissionResultDeny)

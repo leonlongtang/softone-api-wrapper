@@ -9,7 +9,6 @@ import pytest
 pytest.importorskip("langgraph")
 
 from agent_platform.graph import SESSION_ID_KEY, RuntimePolicy, build_orchestrator
-from agent_platform.mcp_tools import CONNECT_TOOL_NAME, MCP_SERVER_NAME, claude_allowed_tools_for_agent
 from agent_platform.prompting import PromptPolicy, build_system_prompt
 from agent_platform.runtimes.base import BAD_TOOL_INPUT, RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import SPECS
@@ -30,12 +29,6 @@ def test_build_system_prompt_dedups_resources_and_includes_envelope() -> None:
     assert "TOOL RESPONSE ENVELOPE" in prompt
     assert prompt.endswith("\n")
 
-
-def test_claude_allowed_tools_prefixes_and_includes_connect() -> None:
-    allowed = claude_allowed_tools_for_agent(("get_customer", "get_customer", "create_order"))
-    assert allowed[0] == f"mcp__{MCP_SERVER_NAME}__{CONNECT_TOOL_NAME}"
-    assert allowed.count(f"mcp__{MCP_SERVER_NAME}__get_customer") == 1
-    assert f"mcp__{MCP_SERVER_NAME}__create_order" in allowed
 
 
 @dataclass
