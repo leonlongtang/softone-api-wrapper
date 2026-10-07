@@ -29,7 +29,7 @@ Branch `polish`, one commit per item, fast-forward merge on sign-off. This file 
       with a fixed approval word; a yes approves only the previously blocked tool names, once each. Both
       runtimes; tests.
 - [x] **6. Lint.** Pin ruff defaults + `I` in `pyproject.toml`; clean.
-- [ ] **7. CI.** GitHub Actions: pytest + ruff; badge in README.
+- [x] **7. CI.** GitHub Actions: pytest + ruff; badge in README.
 - [ ] **8. README.** Pitch, mermaid diagram, real demo transcript (local Ollama; no paid API calls),
       quickstart, 4-line glossary (department agent, route, runtime, escalation), 2-3 doc links.
 - [ ] **9. Final check.** Fresh clone -> quickstart -> tests; delete this file.
