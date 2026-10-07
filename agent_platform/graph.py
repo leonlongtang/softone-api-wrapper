@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
+from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, TypedDict
+from typing import Any, AsyncIterator, Callable, TypedDict
 
 from langgraph.constants import END, START
 from langgraph.graph.state import StateGraph
@@ -159,3 +161,24 @@ def build_orchestrator(
     graph.add_edge("router", "run_agent")
     graph.add_edge("run_agent", END)
     return graph.compile()
+
+
+def escalation_enabled() -> bool:
+    return bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+
+
+@asynccontextmanager
+async def open_orchestrator(runtime: str = "ollama", *, debug: bool = False) -> AsyncIterator[Any]:
+    """Start the runtimes for one chat and yield its orchestrator; they shut down on exit."""
+    from agent_platform.runtimes.claude import ClaudeSdkRuntime
+    from agent_platform.runtimes.ollama import OllamaRuntime
+
+    if runtime == "claude":
+        policy = RuntimePolicy(default="claude", escalate_to=None)
+    else:
+        policy = RuntimePolicy(escalate_to="claude" if escalation_enabled() else None)
+    async with AsyncExitStack() as stack:
+        claude = await stack.enter_async_context(ClaudeSdkRuntime())
+        # runtime="claude" never touches Ollama; the policy never picks the "ollama" slot.
+        ollama = claude if runtime == "claude" else await stack.enter_async_context(OllamaRuntime(debug=debug))
+        yield build_orchestrator(ollama=ollama, claude=claude, policy=policy)

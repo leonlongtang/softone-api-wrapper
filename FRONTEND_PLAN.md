@@ -33,6 +33,6 @@ and for reviewers as the README demo. Run it with `python -m agent_platform.web`
 
 - [x] 1. Gate records a per-turn tool-call trace (+ tests)
 - [x] 2. DB snapshot + turn diff for the 6 business tables (+ tests)
-- [ ] 3. Starlette server: new chat, turn, db, reset, tools (+ test with a fake orchestrator)
+- [x] 3. Starlette server: new chat, turn, db, reset, tools (+ test with a fake orchestrator)
 - [ ] 4. `index.html`: chat, badges, trace, diff, approve buttons, DB tabs, Tools tab
 - [ ] 5. Real run, screenshot, README (Quickstart command, Demo screenshot, "Turn diff" in glossary)

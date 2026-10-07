@@ -7,7 +7,6 @@ import asyncio
 import logging
 import os
 import sys
-from contextlib import AsyncExitStack
 
 from config import load_dotenv
 
@@ -28,20 +27,9 @@ def _parse_args() -> argparse.Namespace:
 
 async def _chat(*, prompt: str, runtime: str, debug: bool) -> None:
     # Heavy imports after arg parsing so `--help` is instant.
-    from agent_platform.graph import OrchestratorState, RuntimePolicy, build_orchestrator
-    from agent_platform.runtimes.claude import ClaudeSdkRuntime
-    from agent_platform.runtimes.ollama import OllamaRuntime
+    from agent_platform.graph import OrchestratorState, open_orchestrator
 
-    if runtime == "claude":
-        policy = RuntimePolicy(default="claude", escalate_to=None)
-    else:
-        policy = RuntimePolicy(escalate_to="claude" if os.getenv("ANTHROPIC_API_KEY", "").strip() else None)
-
-    async with AsyncExitStack() as stack:
-        claude = await stack.enter_async_context(ClaudeSdkRuntime())
-        # --runtime claude never touches Ollama; the policy never picks the "ollama" slot.
-        ollama = claude if runtime == "claude" else await stack.enter_async_context(OllamaRuntime(debug=debug))
-        app = build_orchestrator(ollama=ollama, claude=claude, policy=policy)
+    async with open_orchestrator(runtime, debug=debug) as app:
         state: OrchestratorState = {"artifacts": {}}
 
         async def turn(text: str) -> bool:
