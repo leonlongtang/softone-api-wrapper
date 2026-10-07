@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
 # --- SoftOne reference table codes --------------------------------------
 WS_INVALID_REQUEST = -9            # generic "Invalid Request"
 WS_NO_SESSION = -1                 # caller did not log in

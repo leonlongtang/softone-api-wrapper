@@ -15,27 +15,27 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from .utils import slug, deterministic_suffix
-
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from softone_mcp.business.constants import SOFTONE_BAD_INPUT_CODE, SOFTONE_NOT_FOUND_CODE
+from softone_mcp.business.exceptions import ItemNotFoundError
 from softone_mcp.business.items import (
     create_item_bl,
     delete_item_bl,
-    get_stock_balance_bl,
     get_item_bl,
+    get_stock_balance_bl,
     inventory_adjustment_bl,
     search_items_bl,
     update_item_bl,
 )
-from softone_mcp.business.exceptions import ItemNotFoundError
 from softone_mcp.deps import err, ok
-from softone_mcp.observability import Trace
 from softone_mcp.internal.adapters.repositories import SoftOneItemRepository
+from softone_mcp.observability import Trace
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
+
+from .utils import deterministic_suffix, slug
 
 
 def register_item_tools(mcp: FastMCP, client: SoftOneClient) -> None:

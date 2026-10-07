@@ -12,7 +12,6 @@ from typing import Any
 
 from softone_wrapper import SoftOneClient
 
-
 ITEM_OPTIONAL_KEYS: tuple[str, ...] = (
     "price",
     "stock",

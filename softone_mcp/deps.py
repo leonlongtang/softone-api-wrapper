@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 from config import load_config
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
-from uuid import uuid4
 
 
 def _default_meta() -> dict[str, Any]:

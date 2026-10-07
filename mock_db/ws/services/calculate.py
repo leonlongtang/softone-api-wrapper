@@ -13,9 +13,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from ..errors import WsError, WS_BUSINESS_GENERIC
+from ..errors import WS_BUSINESS_GENERIC, WsError
 from .get_data import get_data_service
-
 
 _CALCULABLE = frozenset({"CUSTOMER", "ORDER", "ITEM"})
 

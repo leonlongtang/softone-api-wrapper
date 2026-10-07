@@ -12,7 +12,6 @@ from typing import Any
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
 
-
 SOFTONE_BAD_INPUT_CODE = -9
 
 

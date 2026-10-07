@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent
 SCHEMA_PATH = ROOT / "schema.sql"
 DEFAULT_DB_PATH = ROOT / "mock_softone.db"

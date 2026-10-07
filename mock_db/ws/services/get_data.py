@@ -10,13 +10,12 @@ from __future__ import annotations
 import sqlite3
 from typing import Any, Callable
 
-from ..errors import WsError, WS_BUSINESS_GENERIC
+from ..errors import WS_BUSINESS_GENERIC, WsError
 from ..objects.customers import get_customer
 from ..objects.invoices import get_invoice
 from ..objects.items import get_item
 from ..objects.orders import get_order
 from ..objects.payments import get_payment
-
 
 # Each handler accepts (conn, key); CUSTOMER also accepts a `locateinfo`
 # string (handled via a closure below) because SoftOne's CUSTOMER getData

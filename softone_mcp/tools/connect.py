@@ -6,10 +6,9 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from config import load_config
+from softone_mcp.deps import err, ok
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
-
-from softone_mcp.deps import err, ok
 
 
 class ConnectDefaultOut(BaseModel):

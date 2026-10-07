@@ -16,7 +16,6 @@ import pytest
 
 from mock_db.mock_ws import WsError, handle_request
 
-
 # ---------------------------------------------------------------------------
 # Tiny helpers used across test classes -- not pytest fixtures because they
 # wrap behavior the tests assert against, not setup data.

@@ -9,10 +9,8 @@ import pytest
 os.environ.setdefault("SOFTONE_MOCK", "true")
 
 from config import load_config
-from softone_wrapper import SoftOneClient
-
-from softone_mcp.business.customers import create_customer_bl, delete_customer_bl
-from softone_mcp.business.customers import search_customers_bl
+from softone_mcp.business.customers import create_customer_bl, delete_customer_bl, search_customers_bl
+from softone_mcp.business.invoices import list_invoices_bl
 from softone_mcp.business.items import (
     create_item_bl,
     delete_item_bl,
@@ -20,7 +18,6 @@ from softone_mcp.business.items import (
     inventory_adjustment_bl,
     search_items_bl,
 )
-from softone_mcp.business.invoices import list_invoices_bl
 from softone_mcp.business.orders import cancel_order_bl, get_order_lines_bl, list_orders_bl
 from softone_mcp.business.payments import list_payments_for_invoice_bl
 from softone_mcp.internal.adapters.repositories import (
@@ -31,6 +28,7 @@ from softone_mcp.internal.adapters.repositories import (
     SoftOneOrderRepository,
     SoftOnePaymentRepository,
 )
+from softone_wrapper import SoftOneClient
 
 
 @pytest.fixture

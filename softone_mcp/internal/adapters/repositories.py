@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from softone_wrapper import SoftOneClient
-
 from softone_mcp.business.ports import (
     CustomerRepository,
     InvoiceRepository,
@@ -21,10 +19,8 @@ from softone_mcp.internal.customers import (
     customers_update,
 )
 from softone_mcp.internal.invoices import invoices_create, invoices_get
-from softone_mcp.internal.items import items_create, items_delete, items_get, items_update
-from softone_mcp.internal.items import items_search
-from softone_mcp.internal.orderitems import orderitems_add_line, orderitems_get_lines
-from softone_mcp.internal.orderitems import orderitems_remove_line
+from softone_mcp.internal.items import items_create, items_delete, items_get, items_search, items_update
+from softone_mcp.internal.orderitems import orderitems_add_line, orderitems_get_lines, orderitems_remove_line
 from softone_mcp.internal.orders import (
     orders_create,
     orders_delete,
@@ -38,6 +34,7 @@ from softone_mcp.internal.payments import (
     payments_get,
     payments_list_for_invoice,
 )
+from softone_wrapper import SoftOneClient
 
 
 class SoftOneCustomerRepository(CustomerRepository):

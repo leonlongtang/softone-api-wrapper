@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
-from softone_wrapper import SoftOneClient
-from softone_wrapper.domain.errors import SoftOneError
-
 from softone_mcp.business.ports import InventoryService, ItemLineInput, ReservationToken
 from softone_mcp.internal.items import items_get, items_update
 from softone_mcp.internal.orderitems import orderitems_get_lines
+from softone_wrapper import SoftOneClient
+from softone_wrapper.domain.errors import SoftOneError
 
 
 class SoftOneInventoryService(InventoryService):

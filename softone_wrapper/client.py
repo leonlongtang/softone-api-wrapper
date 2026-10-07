@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .domain.models import LoginSelection, SoftOneSession
 from .domain.errors import SoftOneError
+from .domain.models import LoginSelection, SoftOneSession
 from .infrastructure.gateway import SoftOneGateway
 from .infrastructure.http_gateway import HttpGateway, HttpGatewayConfig
 from .infrastructure.mock_gateway import MockGateway

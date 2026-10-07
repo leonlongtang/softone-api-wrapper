@@ -17,8 +17,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from ..errors import WsError, WS_BUSINESS_RULE, WS_FK_BLOCKED
-
+from ..errors import WS_BUSINESS_RULE, WS_FK_BLOCKED, WsError
 
 # Allowed order status vocabulary + legal transitions. Mirrors the schema's
 # CHECK constraint, but enforced earlier so callers get a structured error

@@ -9,13 +9,12 @@ from __future__ import annotations
 import sqlite3
 from typing import Any, Callable
 
-from ..errors import WsError, WS_BUSINESS_GENERIC, WS_INVALID_REQUEST
+from ..errors import WS_BUSINESS_GENERIC, WS_INVALID_REQUEST, WsError
 from ..objects.customers import del_customer
 from ..objects.invoices import del_invoice
 from ..objects.items import del_item
 from ..objects.orders import del_order
 from ..objects.payments import del_payment
-
 
 _DELETERS: dict[str, Callable[..., dict[str, Any]]] = {
     "CUSTOMER": del_customer,

@@ -9,7 +9,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from ..errors import WsError, WS_NOT_FOUND
+from ..errors import WS_NOT_FOUND, WsError
 
 
 def einvoice_service(payload: dict[str, Any], conn: sqlite3.Connection) -> dict[str, Any]:

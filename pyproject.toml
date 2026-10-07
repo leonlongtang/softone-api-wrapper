@@ -28,7 +28,11 @@ py-modules = ["config"]
 mock_db = ["schema.sql"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]  # classic ruff defaults (pyflakes + core pycodestyle) + import sorting
 
 [tool.pytest.ini_options]
 # `mock_db` is a top-level package next to `tests/`; pytest needs the project

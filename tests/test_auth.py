@@ -16,7 +16,6 @@ import pytest
 
 from mock_db.mock_ws import WsError, authenticate, login
 
-
 SEED_CREDS = {"username": "john", "password": "aitis", "appId": "2001"}
 SEED_SELECTION = {"COMPANY": "1000", "BRANCH": "1000", "MODULE": "0", "REFID": "1"}
 

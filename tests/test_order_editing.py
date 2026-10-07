@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from config import load_config
-from softone_wrapper import SoftOneClient
 from softone_mcp.business.exceptions import InvalidOrderStatusError
 from softone_mcp.business.orders import add_order_line_bl, update_order_notes_bl
 from softone_mcp.internal.adapters.inventory import SoftOneInventoryService
@@ -15,6 +14,7 @@ from softone_mcp.internal.adapters.repositories import (
     SoftOneOrderItemsRepository,
     SoftOneOrderRepository,
 )
+from softone_wrapper import SoftOneClient
 
 
 @pytest.fixture

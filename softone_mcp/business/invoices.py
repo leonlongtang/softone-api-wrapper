@@ -19,10 +19,8 @@ from .exceptions import (
     InvoiceNotFoundError,
     OrderNotFoundError,
 )
-
 from .ports import InventoryService, InvoiceRepository, OrderRepository
 from .translate import translate_softone_not_found
-
 
 PAYMENT_TERMS_DAYS: dict[str, int] = {
     "due_on_receipt": 0,

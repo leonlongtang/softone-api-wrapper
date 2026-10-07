@@ -11,7 +11,6 @@ from .tools.items import register_item_tools
 from .tools.orders import register_order_tools
 from .tools.payments import register_payment_tools
 
-
 mcp = FastMCP()
 
 # One client per process (keeps wrapper's in-memory session store).

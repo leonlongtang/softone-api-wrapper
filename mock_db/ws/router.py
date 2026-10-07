@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Callable
 
-from .errors import WsError, WS_INVALID_CALL
+from .errors import WS_INVALID_CALL, WsError
 from .services.calculate import calculate_service
 from .services.del_data import del_data_service
 from .services.einvoice import einvoice_service
@@ -35,7 +35,6 @@ from .session import (
     authenticate,
     login,
 )
-
 
 # Type alias: every authenticated service handler takes (payload, conn).
 ServiceHandler = Callable[[dict[str, Any], sqlite3.Connection], dict[str, Any]]

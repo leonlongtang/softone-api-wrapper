@@ -12,12 +12,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .errors import (
-    WsError,
     WS_BAD_CREDENTIALS,
     WS_NO_SESSION,
     WS_SESSION_EXPIRED,
+    WsError,
 )
-
 
 # Path constants. The seed script writes the DB next to mock_db/, so __file__
 # must walk up two levels (out of `ws/` then out of `mock_db/`'s subpackage).

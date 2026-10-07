@@ -15,8 +15,6 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from .utils import slug, deterministic_suffix
-
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
@@ -32,6 +30,8 @@ from softone_mcp.deps import err, ok
 from softone_mcp.internal.adapters.repositories import SoftOneCustomerRepository
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
+
+from .utils import deterministic_suffix, slug
 
 
 def register_customer_tools(mcp: FastMCP, client: SoftOneClient) -> None:

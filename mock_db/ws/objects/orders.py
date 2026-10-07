@@ -11,7 +11,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from ..errors import WsError, WS_INVALID_REQUEST, WS_NOT_FOUND, WS_BUSINESS_RULE
+from ..errors import WS_BUSINESS_RULE, WS_INVALID_REQUEST, WS_NOT_FOUND, WsError
 from .validators import (
     ALLOWED_ORDER_STATUSES,
     assert_customer_exists,

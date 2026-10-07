@@ -4,7 +4,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from ..errors import WsError, WS_INVALID_REQUEST, WS_NOT_FOUND
+from ..errors import WS_INVALID_REQUEST, WS_NOT_FOUND, WsError
 from .validators import delete_with_fk_guard
 
 

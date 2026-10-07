@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .ports import CustomerRepository
 from .exceptions import CustomerNotFoundError
+from .ports import CustomerRepository
 from .translate import translate_softone_not_found
 
 

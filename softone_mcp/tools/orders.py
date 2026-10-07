@@ -19,6 +19,14 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from softone_mcp.business.constants import SOFTONE_BAD_INPUT_CODE, SOFTONE_NOT_FOUND_CODE
+from softone_mcp.business.customers import search_customers_bl
+from softone_mcp.business.exceptions import (
+    CustomerNotFoundError,
+    InsufficientStockError,
+    InvalidOrderStatusError,
+    ItemNotFoundError,
+    OrderNotFoundError,
+)
 from softone_mcp.business.orders import (
     add_order_line_bl,
     approve_order_bl,
@@ -29,14 +37,6 @@ from softone_mcp.business.orders import (
     list_orders_bl,
     remove_order_line_bl,
     update_order_notes_bl,
-)
-from softone_mcp.business.customers import search_customers_bl
-from softone_mcp.business.exceptions import (
-    CustomerNotFoundError,
-    InsufficientStockError,
-    InvalidOrderStatusError,
-    ItemNotFoundError,
-    OrderNotFoundError,
 )
 from softone_mcp.deps import err, ok
 from softone_mcp.internal.adapters.inventory import SoftOneInventoryService
@@ -49,7 +49,6 @@ from softone_mcp.internal.adapters.repositories import (
 from softone_mcp.observability import Trace
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
-
 
 # ---------------------------------------------------------------------------
 # Order line element (kept as a BaseModel so the JSON schema for each array

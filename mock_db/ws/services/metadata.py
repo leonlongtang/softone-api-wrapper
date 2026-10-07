@@ -13,7 +13,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from ..errors import WsError, WS_BUSINESS_GENERIC
+from ..errors import WS_BUSINESS_GENERIC, WsError
 from ..objects.customers import selector_lookup
 
 

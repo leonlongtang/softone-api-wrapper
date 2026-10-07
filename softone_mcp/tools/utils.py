@@ -1,5 +1,6 @@
 import re
 
+
 def slug(s: str) -> str:
     s = s.strip().upper()
     s = re.sub(r"[^A-Z0-9]+", "-", s)

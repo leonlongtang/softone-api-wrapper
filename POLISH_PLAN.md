@@ -28,7 +28,7 @@ Branch `polish`, one commit per item, fast-forward merge on sign-off. This file 
 - [x] **5. Write-confirmation gate (code-enforced).** Write tools blocked until the user's next turn starts
       with a fixed approval word; a yes approves only the previously blocked tool names, once each. Both
       runtimes; tests.
-- [ ] **6. Lint.** Pin ruff defaults + `I` in `pyproject.toml`; clean.
+- [x] **6. Lint.** Pin ruff defaults + `I` in `pyproject.toml`; clean.
 - [ ] **7. CI.** GitHub Actions: pytest + ruff; badge in README.
 - [ ] **8. README.** Pitch, mermaid diagram, real demo transcript (local Ollama; no paid API calls),
       quickstart, 4-line glossary (department agent, route, runtime, escalation), 2-3 doc links.

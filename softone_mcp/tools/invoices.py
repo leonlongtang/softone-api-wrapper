@@ -19,28 +19,27 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from softone_mcp.business.constants import SOFTONE_BAD_INPUT_CODE, SOFTONE_NOT_FOUND_CODE
-from softone_mcp.business.invoices import (
-    create_invoice_bl,
-    get_invoice_bl,
-    list_invoices_bl,
-    get_unpaid_invoices_bl,
-)
 from softone_mcp.business.exceptions import (
     InvalidOrderStatusError,
     InvalidPaymentTermsError,
     InvoiceNotFoundError,
     OrderNotFoundError,
 )
+from softone_mcp.business.invoices import (
+    create_invoice_bl,
+    get_invoice_bl,
+    get_unpaid_invoices_bl,
+    list_invoices_bl,
+)
 from softone_mcp.deps import err, ok
-from softone_mcp.observability import Trace
 from softone_mcp.internal.adapters.inventory import SoftOneInventoryService
 from softone_mcp.internal.adapters.repositories import (
     SoftOneInvoiceRepository,
     SoftOneOrderRepository,
 )
+from softone_mcp.observability import Trace
 from softone_wrapper import SoftOneClient
 from softone_wrapper.domain.errors import SoftOneError
-
 
 # ---------------------------------------------------------------------------
 # MCP tool registrations
@@ -148,12 +147,12 @@ def register_invoice_tools(mcp: FastMCP, client: SoftOneClient) -> None:
         )
 
         # Import locally to avoid circular imports between tool modules.
-        from softone_mcp.business.orders import create_order_bl  # pylint: disable=import-outside-toplevel
         from softone_mcp.business.exceptions import (  # pylint: disable=import-outside-toplevel
             CustomerNotFoundError,
             InsufficientStockError,
             ItemNotFoundError,
         )
+        from softone_mcp.business.orders import create_order_bl  # pylint: disable=import-outside-toplevel
         from softone_mcp.internal.adapters.repositories import (  # pylint: disable=import-outside-toplevel
             SoftOneCustomerRepository,
             SoftOneItemRepository,
