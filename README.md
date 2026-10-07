@@ -26,6 +26,10 @@ A real, unedited run on the mock ERP (`--runtime claude`; only your typed lines 
 login notice removed). Every write is blocked and shown verbatim until you say yes; "Invoice that order" is
 routed to finance, which still knows it means order 5006.
 
+**Fully local works too.** The same six-turn script on Ollama with `qwen2.5:7b` passed 3 out of 3 runs, checked
+against the database: order 5006 confirmed, one $1,250 invoice, no duplicate writes. That was on a laptop with a
+GTX 1650 (4 GB) and 8 GB RAM, at about 5½ minutes per run.
+
 ```text
 You: Create an order for customer 47: 1x item 1001 and 2x item 1002
 [sales | claude] **Order Summary - Ready for Approval**
@@ -138,13 +142,18 @@ git clone https://github.com/leonlongtang/softone-api-wrapper && cd softone-api-
 uv sync                          # or: python -m venv .venv && pip install -e . pytest
 uv run pytest -q                 # 128 tests, ~3s, no LLM needed
 
-ollama pull qwen2.5:7b           # any tool-calling model works: set OLLAMA_MODEL
+ollama pull qwen2.5:7b           # tested default (4.7 GB); other tool-calling models: set OLLAMA_MODEL
 uv run python -m agent_platform                                   # chat
 uv run python -m agent_platform "List unpaid invoices for customer 47"   # one turn
 uv run python -m agent_platform --runtime claude "..."            # Claude only (needs ANTHROPIC_API_KEY)
 ```
 
 Configuration is optional: copy `.env.example` to `.env` to set a model, an API key, or real SoftOne credentials.
+
+**Choosing a local model.** On 8 GB RAM / 4 GB VRAM, about 8B parameters is the practical ceiling. `qwen3:8b`
+answered correctly in a spot check, but its built-in reasoning made that turn about 3× slower than `qwen2.5:7b`
+on the test laptop, so `qwen2.5:7b` stays the default. With more memory, larger tool-calling models are worth
+trying via `OLLAMA_MODEL`.
 
 ## How it works
 
