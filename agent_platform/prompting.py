@@ -57,6 +57,13 @@ def build_system_prompt(
             "- Do NOT retry blindly or adjust inputs without user confirmation."
         )
 
+    parts.append(
+        "WRITE CONFIRMATION (enforced by the platform, not by you):\n"
+        "- When you have every input for a write, call the write tool directly. Do not ask first.\n"
+        "- The platform blocks the call and shows the user the exact call to approve.\n"
+        "- If a tool result says BLOCKED, briefly say what the call will change and wait. Do not retry it."
+    )
+
     return "\n\n".join(p for p in parts if p).strip() + "\n"
 
 

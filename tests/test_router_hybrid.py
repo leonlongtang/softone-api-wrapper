@@ -18,9 +18,10 @@ def test_hybrid_route_sales() -> None:
     assert hybrid_route("approve order 5001") == "sales"
 
 
-def test_hybrid_route_clarify_when_ambiguous() -> None:
-    assert hybrid_route("help me with this") == "clarify"
-    assert hybrid_route("") == "clarify"
+def test_hybrid_route_unknown_without_signals() -> None:
+    assert hybrid_route("help me with this") == "unknown"
+    assert hybrid_route("yes") == "unknown"
+    assert hybrid_route("") == "unknown"
 
 
 

@@ -25,7 +25,7 @@ Branch `polish`, one commit per item, fast-forward merge on sign-off. This file 
 - [x] **4. Real department routing.** Route -> sales/inventory/finance spec; delete `ops`, move workflow
       tools to sales; a clarify reply of `sales|inventory|finance` sends the original text there; one shared
       conversation history across departments; Claude runtime rebuilds its client when the spec changes.
-- [ ] **5. Write-confirmation gate (code-enforced).** Write tools blocked until the user's next turn starts
+- [x] **5. Write-confirmation gate (code-enforced).** Write tools blocked until the user's next turn starts
       with a fixed approval word; a yes approves only the previously blocked tool names, once each. Both
       runtimes; tests.
 - [ ] **6. Lint.** Pin ruff defaults + `I` in `pyproject.toml`; clean.

@@ -8,12 +8,15 @@ from typing import Any, Callable, TypedDict
 from langgraph.constants import END, START
 from langgraph.graph.state import StateGraph
 
+from agent_platform.gate import WriteGate
 from agent_platform.router import CLARIFY_QUESTION, DEPARTMENTS, hybrid_route
 from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import SPECS, AgentSpec
 
 SESSION_ID_KEY = "session_id"
 PENDING_USER_TEXT_KEY = "pending_user_text"
+LAST_ROUTE_KEY = "last_route"
+GATE_KEY = "write_gate"
 
 
 class OrchestratorState(TypedDict, total=False):
@@ -21,7 +24,7 @@ class OrchestratorState(TypedDict, total=False):
     route: str  # a department, or "clarify"
     runtime: str  # which runtime answered: "ollama", "claude", or "router" for a clarify
     response: str
-    # Cross-turn state: session_id, pending clarify text, conversation history.
+    # Cross-turn state: session_id, pending clarify text, last department, write gate, history.
     artifacts: dict[str, Any]
 
 
@@ -56,16 +59,21 @@ def build_orchestrator(
     async def router_node(state: OrchestratorState) -> OrchestratorState:
         text = (state.get("user_text") or "").strip()
         artifacts = state.setdefault("artifacts", {})
+        artifacts.setdefault(GATE_KEY, WriteGate()).start_turn(text)
         pending = artifacts.pop(PENDING_USER_TEXT_KEY, None)
 
         if pending and text.lower() in DEPARTMENTS:
             # Reply to a clarify: send the original request to the chosen department.
             state["route"], state["user_text"] = text.lower(), pending
         else:
-            state["route"] = router(text)
+            route = router(text)
+            # Follow-ups without department words ("yes", "47") stay with the current department.
+            state["route"] = artifacts.get(LAST_ROUTE_KEY, "clarify") if route == "unknown" else route
 
-        if state["route"] == "clarify":
-            state["runtime"], state["response"] = "router", CLARIFY_QUESTION
+        if state["route"] in DEPARTMENTS:
+            artifacts[LAST_ROUTE_KEY] = state["route"]
+        else:
+            state["route"], state["runtime"], state["response"] = "clarify", "router", CLARIFY_QUESTION
             artifacts[PENDING_USER_TEXT_KEY] = text
         return state
 
@@ -73,7 +81,11 @@ def build_orchestrator(
         runtime = claude if runtime_name == "claude" else ollama
         artifacts = state["artifacts"]
         # Only Ollama keeps a host-managed MCP session; Claude connects inside its own MCP subprocess.
-        ctx = RunContext(session_id=artifacts.get(SESSION_ID_KEY) if runtime_name == "ollama" else None, artifacts=artifacts)
+        ctx = RunContext(
+            session_id=artifacts.get(SESSION_ID_KEY) if runtime_name == "ollama" else None,
+            artifacts=artifacts,
+            gate=artifacts[GATE_KEY],
+        )
         ensure_connected = getattr(runtime, "ensure_connected", None)
         if ensure_connected:
             await ensure_connected(ctx)
@@ -86,6 +98,13 @@ def build_orchestrator(
     async def run_agent_node(state: OrchestratorState) -> OrchestratorState:
         if state["route"] == "clarify":
             return state
+        state = await run_with_recovery(state)
+        # Show the exact blocked write calls ourselves rather than trusting the model's summary.
+        if pending := state["artifacts"][GATE_KEY].pending_summary():
+            state["response"] = f"{(state.get('response') or '').rstrip()}\n\n{pending}"
+        return state
+
+    async def run_with_recovery(state: OrchestratorState) -> OrchestratorState:
         spec = SPECS[state["route"]]
         runtime_name = policy.default
         try:

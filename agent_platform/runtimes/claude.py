@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from typing import Any
 
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
+    PermissionResultAllow,
+    PermissionResultDeny,
     ResultMessage,
     TextBlock,
 )
 
+from agent_platform.gate import WRITE_TOOLS, WriteGate
 from agent_platform.mcp_tools import (
     CONNECT_TOOL_NAME,
     MCP_SERVER_NAME,
@@ -48,6 +52,7 @@ class ClaudeSdkRuntime(RuntimeAdapter):
     _client: ClaudeSDKClient | None = None
     _spec_name: str | None = None
     _conversation_id: str | None = None
+    _gate: WriteGate = field(default_factory=WriteGate)
 
     def _options_for_spec(self, spec: AgentSpec) -> ClaudeAgentOptions:
         params = mcp_server_params()
@@ -57,7 +62,10 @@ class ClaudeSdkRuntime(RuntimeAdapter):
                 MCP_SERVER_NAME: {"type": "stdio", "command": params["command"], "args": params["args"], "env": params["env"]}
             },
             tools=[],  # no built-in Claude Code tools (Bash, Read, ...): MCP tools only
-            allowed_tools=claude_allowed_tools_for_agent(spec.tool_names),
+            # The SDK auto-approves allowed_tools without asking can_use_tool, so only reads go here;
+            # writes always reach the gate.
+            allowed_tools=claude_allowed_tools_for_agent(tuple(t for t in spec.tool_names if t not in WRITE_TOOLS)),
+            can_use_tool=self._permission_callback(spec),
             system_prompt=build_system_prompt(
                 base=spec.system_prompt,
                 session_instruction=SESSION_INSTRUCTION,
@@ -68,6 +76,19 @@ class ClaudeSdkRuntime(RuntimeAdapter):
             fallback_model=os.getenv("CLAUDE_FALLBACK_MODEL", "").strip() or None,
             resume=self._conversation_id,
         )
+
+    def _permission_callback(self, spec: AgentSpec) -> Any:
+        prefix = mcp_prefixed_tool_name("")
+
+        async def can_use_tool(tool_name: str, tool_input: dict[str, Any], _ctx: Any) -> Any:
+            tool = tool_name.removeprefix(prefix)
+            if not tool_name.startswith(prefix) or tool not in spec.tool_names:
+                return PermissionResultDeny(message=f"`{tool_name}` is not available to the {spec.name} agent.")
+            if refusal := self._gate.check(tool, tool_input):
+                return PermissionResultDeny(message=refusal)
+            return PermissionResultAllow()
+
+        return can_use_tool
 
     async def __aenter__(self) -> ClaudeSdkRuntime:
         return self  # the client is opened lazily on the first turn
@@ -81,6 +102,7 @@ class ClaudeSdkRuntime(RuntimeAdapter):
         self._client = None
 
     async def run_turn(self, *, spec: AgentSpec, user_text: str, context: RunContext) -> str:
+        self._gate = context.gate
         if self._client is None or self._spec_name != spec.name:
             await self._close()
             self._client = ClaudeSDKClient(options=self._options_for_spec(spec))

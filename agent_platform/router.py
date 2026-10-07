@@ -1,4 +1,4 @@
-"""Deterministic keyword router: pick a department, or "clarify" when the request is ambiguous."""
+"""Deterministic keyword router: a department, "clarify" on conflicting signals, "unknown" on none."""
 
 from __future__ import annotations
 
@@ -24,10 +24,13 @@ CLARIFY_QUESTION = (
 
 
 def hybrid_route(user_text: str) -> str:
-    """Return a department name, or "clarify" (caller asks CLARIFY_QUESTION and stops)."""
+    """Return a department, "clarify" (caller asks CLARIFY_QUESTION), or "unknown" (no signal:
+    a follow-up like "yes" or "47", which the caller keeps with the current department)."""
     words = set(re.findall(r"[a-z]+", (user_text or "").lower()))
     finance, inventory, sales = bool(words & FINANCE), bool(words & INVENTORY), bool(words & SALES)
 
+    if not (finance or inventory or sales):
+        return "unknown"
     if finance + inventory + sales == 1:
         return "finance" if finance else "inventory" if inventory else "sales"
 

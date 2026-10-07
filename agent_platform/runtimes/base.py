@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from agent_platform.gate import WriteGate
 from agent_platform.specs import AgentSpec
 
 
@@ -14,6 +15,8 @@ class RunContext:
     session_id: str | None = None
     # Cross-turn state (conversation history, etc.).
     artifacts: dict[str, Any] = field(default_factory=dict)
+    # Write confirmation shared by all runtimes; runtimes must consult it before any tool call.
+    gate: WriteGate = field(default_factory=WriteGate)
 
 
 class ToolError(Exception):

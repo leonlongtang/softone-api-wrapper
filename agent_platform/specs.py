@@ -24,7 +24,6 @@ def sales_agent_spec() -> AgentSpec:
             "\n"
             "SAFETY RULES:\n"
             "- Never invent IDs (customer_id, order_id, item_id). If missing, look them up first.\n"
-            "- Before any WRITE action (create/approve/cancel/update/delete), restate what will change and ask for confirmation.\n"
             "- If the user provides a name/code instead of an ID, search/get first and confirm the selected record.\n"
             "- If the request is ambiguous (which customer, which order, which items), ask ONE clarifying question.\n"
             "\n"
@@ -82,7 +81,6 @@ def inventory_agent_spec() -> AgentSpec:
             "\n"
             "SAFETY RULES:\n"
             "- Never invent item IDs. If the user gives a code/name, search/get first and confirm the chosen item.\n"
-            "- Treat inventory adjustments and item creation as WRITE operations: summarize the delta/creation and ask for confirmation.\n"
             "- Do NOT change inventory as a side effect of other workflows (e.g. order creation). Only do writes when the user explicitly asks to change stock or create/update items.\n"
             "- If stock is insufficient or constraints apply, explain clearly and ask how to proceed.\n"
             "\n"
@@ -111,7 +109,6 @@ def finance_agent_spec() -> AgentSpec:
             "\n"
             "SAFETY RULES:\n"
             "- Never guess amounts, invoice IDs, or payment IDs.\n"
-            "- Before any WRITE action (create invoice, record payment, refund), restate the exact amounts/currency and ask for confirmation.\n"
             "- If the user references an invoice by something ambiguous, retrieve it first and confirm the exact invoice.\n"
             "- If an invoice is unpaid/partially paid, show the relevant status before recording a payment.\n"
         ),

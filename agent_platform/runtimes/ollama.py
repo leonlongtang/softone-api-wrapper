@@ -11,6 +11,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_platform.gate import WriteGate
 from agent_platform.mcp_tools import CONNECT_TOOL_NAME, MCP_SERVER_NAME, mcp_server_params
 from agent_platform.prompting import PromptPolicy, build_system_prompt
 from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
@@ -95,8 +96,8 @@ def _build_retry_question(tool_name: str, error: dict[str, Any]) -> str:
     return f"{message} How do you want to proceed?"
 
 
-def _wrap_tool(tool: Any, *, debug: bool) -> Any:
-    """Preserve args_schema; normalize return value; raise ToolError on ok:false."""
+def _wrap_tool(tool: Any, *, gate: WriteGate, debug: bool) -> Any:
+    """Preserve args_schema; enforce the write gate; normalize the result; raise ToolError on ok:false."""
 
     from langchain_core.tools import StructuredTool
     from langchain_core.tools.base import ToolException
@@ -105,6 +106,10 @@ def _wrap_tool(tool: Any, *, debug: bool) -> Any:
         # LLMs sometimes send explicit nulls; most MCP tool schemas model
         # optional fields by omitting them (not by passing null).
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        if refusal := gate.check(tool.name, kwargs):
+            # Returned to the model, not raised: a gated write is not a tool failure to escalate.
+            logger.debug("[gate] blocked %s %s", tool.name, _short_json(kwargs))
+            return {"blocked": True, "message": refusal}
         if debug:
             logger.debug("[mcp] -> %s %s", tool.name, _short_json(kwargs))
         # Retry connect + read-only tools once on transient exceptions; never retry writes.
@@ -267,7 +272,7 @@ class OllamaRuntime(RuntimeAdapter):
             extra_resource_uris=spec.resource_uris,
         )
 
-    def _business_tools_for_spec(self, spec: AgentSpec) -> list[Any]:
+    def _business_tools_for_spec(self, spec: AgentSpec, gate: WriteGate) -> list[Any]:
         if not self._raw_tools_by_name:
             raise RuntimeError("OllamaRuntime not initialized (use `async with`).")
         available = set(self._raw_tools_by_name.keys())
@@ -289,7 +294,7 @@ class OllamaRuntime(RuntimeAdapter):
             for name, t in self._raw_tools_by_name.items()
             if name in requested and name != CONNECT_TOOL_NAME
         ]
-        return [_wrap_tool(t, debug=self.debug) for t in raw_tools]
+        return [_wrap_tool(t, gate=gate, debug=self.debug) for t in raw_tools]
 
     async def run_turn(self, *, spec: AgentSpec, user_text: str, context: RunContext) -> str:
         from langchain.agents import create_agent
@@ -305,7 +310,7 @@ class OllamaRuntime(RuntimeAdapter):
         messages: list[Any] = context.artifacts.get(HISTORY_KEY) or []
         agent = create_agent(
             ChatOllama(model=self.model),
-            self._business_tools_for_spec(spec),
+            self._business_tools_for_spec(spec, context.gate),
             system_prompt=self._system_prompt(spec=spec, session_id=context.session_id),
         )
 
