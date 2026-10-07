@@ -29,6 +29,8 @@ NEEDS_CONFIRMATION = (
     "Tell the user exactly what this call will change and ask them to reply 'yes' to approve."
 )
 
+ALREADY_DONE = "`{tool}` already ran with these exact arguments this turn. Do not repeat it; use its earlier result."
+
 
 def is_approval(text: str) -> bool:
     t = text.strip().lower()
@@ -42,17 +44,23 @@ class WriteGate:
     # differences). Upgrade path: normalize args and compare them too.
     blocked: dict[str, dict[str, Any]] = field(default_factory=dict)  # tool -> args, this turn
     approved: set[str] = field(default_factory=set)
+    ran: set[str] = field(default_factory=set)  # writes executed this turn, as "tool:args-json"
 
     def start_turn(self, user_text: str) -> None:
         self.approved = set(self.blocked) if is_approval(user_text) else set()
-        self.blocked = {}
+        self.blocked, self.ran = {}, set()
 
     def check(self, tool: str, args: dict[str, Any]) -> str | None:
         """Return None if the call may run, else a refusal message for the model."""
         if tool not in WRITE_TOOLS:
             return None
+        call = f"{tool}:{json.dumps(args, sort_keys=True, default=str)}"
+        if call in self.ran:
+            # Small models sometimes emit the same call twice in one turn; never write twice.
+            return ALREADY_DONE.format(tool=tool)
         if tool in self.approved:
             self.approved.discard(tool)  # one call per approval
+            self.ran.add(call)
             return None
         self.blocked[tool] = args
         return NEEDS_CONFIRMATION.format(tool=tool)

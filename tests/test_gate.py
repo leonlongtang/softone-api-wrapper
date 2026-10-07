@@ -46,6 +46,16 @@ def test_yes_approves_only_blocked_tools_once() -> None:
     assert g.check("delete_customer", {"customer_id_or_name": 47}) is not None  # never approved
 
 
+def test_duplicate_call_after_approval_never_writes_twice() -> None:
+    g = WriteGate()
+    g.start_turn("create an order")
+    g.check("create_order", {"customer_id": 47})
+    g.start_turn("yes")
+    assert g.check("create_order", {"customer_id": 47}) is None
+    assert "already ran" in g.check("create_order", {"customer_id": 47})
+    assert not g.blocked  # a duplicate isn't presented as a new approval
+
+
 def test_any_other_reply_clears_pending_approval() -> None:
     g = WriteGate()
     g.start_turn("create an order")
