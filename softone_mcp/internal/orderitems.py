@@ -25,25 +25,6 @@ def _line_to_softone_row(line: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def orderitems_replace_lines(
-    client: SoftOneClient,
-    session_id: str,
-    order_id: int,
-    lines: list[dict[str, Any]],
-) -> dict[str, Any]:
-    """Replace all ORDERITEMS for an order with the given lines."""
-    payload = {
-        "ORDER": [{}],
-        "ORDERITEMS": [_line_to_softone_row(ln) for ln in lines],
-    }
-    return client.setData(
-        session_id=session_id,
-        OBJECT="ORDER",
-        KEY=str(order_id),
-        data=payload,
-    )
-
-
 def orderitems_add_line(
     client: SoftOneClient,
     session_id: str,

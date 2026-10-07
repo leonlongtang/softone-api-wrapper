@@ -52,38 +52,6 @@ def payments_get(
     )
 
 
-def payments_update(
-    client: SoftOneClient,
-    session_id: str,
-    key: int,
-    **fields: Any,
-) -> dict[str, Any]:
-    """Patch a PAYMENT. Empty patches return a synthetic no-op response."""
-    patch: dict[str, Any] = {}
-    for k, v in fields.items():
-        if isinstance(v, str):
-            v = v.strip()
-            if not v:
-                continue
-        elif v is None:
-            continue
-        patch[k.upper()] = v
-
-    if not patch:
-        return {
-            "success": True,
-            "id": str(key),
-            "note": "No fields provided; nothing to update.",
-        }
-
-    return client.setData(
-        session_id=session_id,
-        OBJECT="PAYMENT",
-        KEY=str(key),
-        data={"PAYMENT": [patch]},
-    )
-
-
 def payments_delete(
     client: SoftOneClient,
     session_id: str,

@@ -98,15 +98,6 @@ def orders_get(
     return client.getData(session_id=session_id, OBJECT="ORDER", KEY=key, FORM="")
 
 
-def orders_get_raw(
-    client: SoftOneClient,
-    session_id: str,
-    key: int,
-) -> dict[str, Any]:
-    """Back-compat alias for raw getData response."""
-    return orders_get(client, session_id, key)
-
-
 def orders_get_normalized(
     client: SoftOneClient,
     session_id: str,

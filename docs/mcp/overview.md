@@ -6,8 +6,13 @@ The MCP server provides **tools** for agents to operate SoftOne ERP via the Pyth
 
 - MCP server root: `softone_mcp/server.py`
 - Domain tools: `softone_mcp/tools/` (`customers.py`, `items.py`, `orders.py`, `invoices.py`, `payments.py`, `connect.py`)
-- Tool / envelope audit: [`docs/mcp/tool_audit.md`](./tool_audit.md)
 - Full tool list and JSON examples: [`docs/mcp/tools_catalog.md`](./tools_catalog.md)
+
+## Layer contract
+
+- **Tools** ([`softone_mcp/tools/`](../../softone_mcp/tools/)) own the `{ "ok": true, "data" }` / `{ "ok": false, "error" }` envelope ([`softone_mcp/deps.py`](../../softone_mcp/deps.py)).
+- **Business** ([`softone_mcp/business/`](../../softone_mcp/business/)) implements use cases, returns raw dicts, raises domain exceptions or `ValueError` for rule violations.
+- **Internal** ([`softone_mcp/internal/`](../../softone_mcp/internal/)) maps to SoftOne WS payloads; lets `SoftOneError` propagate.
 
 ## Design: two tool layers
 
@@ -58,9 +63,3 @@ Best practice:
 - For agent usage: always send JSON payloads (Inspector “Switch to JSON”).
 - For human testing in form mode: keep inputs simple (`str` with `""` defaults) where possible.
 - For `create_customer`, optional fields are implemented as empty strings (form-friendly).
-
-## Agent prompt policy
-
-The department agents in `agent_platform/specs.py` follow the baseline policy documented in:
-- [`docs/agents/agent_prompt_policy.md`](../agents/agent_prompt_policy.md)
-

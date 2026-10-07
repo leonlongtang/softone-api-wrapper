@@ -13,7 +13,7 @@ These docs describe how the **API wrapper** and **MCP server** fit together, so 
 - [playbook items](agents/playbooks/items.md) (end-to-end item workflows for agents)
 - [playbook payments](agents/playbooks/payments.md) (end-to-end payment workflows for agents)
 - [playbook invoices](agents/playbooks/invoices.md) (end-to-end invoice workflows for agents)
-- [agent workflows index](agents/workflows/INDEX.md) (high-level business workflows for agents)
+- [order to cash](agents/workflows/order_to_cash.md) (end-to-end workflow: customer -> order -> invoice -> payment)
 
 ## Key conventions
 
