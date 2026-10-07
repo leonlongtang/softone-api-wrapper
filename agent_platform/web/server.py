@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 async def _tool_catalog() -> dict[str, list[dict[str, Any]]]:
     from softone_mcp.server import mcp
 
-    summary = {t.name: (t.description or "").split(". ")[0].strip().rstrip(".") for t in await mcp.list_tools()}
+    summary = {
+        t.name: (t.description or "").removeprefix("Business action: ").split(". ")[0].strip().rstrip(".")
+        for t in await mcp.list_tools()
+    }
     return {
         dept: [{"name": n, "write": n in WRITE_TOOLS, "description": summary.get(n, "")} for n in spec.tool_names]
         for dept, spec in SPECS.items()
