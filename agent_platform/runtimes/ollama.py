@@ -203,7 +203,7 @@ async def _check_ollama(model: str) -> None:
     except ollama.ResponseError as exc:
         if exc.status_code == 404:
             raise RuntimeError(f"Ollama model `{model}` is not pulled. Run `ollama pull {model}`. {hint}") from exc
-        raise
+        raise RuntimeError(f"Ollama failed to load `{model}`: {str(exc.error).rstrip('.')}. {hint}") from exc
     except Exception as exc:  # connection refused surfaces as several exception types
         raise RuntimeError(f"Ollama is not reachable ({exc}). Start it with `ollama serve`. {hint}") from exc
 
