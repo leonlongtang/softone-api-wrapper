@@ -45,26 +45,36 @@ class WriteGate:
     blocked: dict[str, dict[str, Any]] = field(default_factory=dict)  # tool -> args, this turn
     approved: set[str] = field(default_factory=set)
     ran: set[str] = field(default_factory=set)  # writes executed this turn, as "tool:args-json"
+    trace: list[dict[str, Any]] = field(default_factory=list)  # every call this turn: {tool, args, status}
 
     def start_turn(self, user_text: str) -> None:
         self.approved = set(self.blocked) if is_approval(user_text) else set()
-        self.blocked, self.ran = {}, set()
+        self.blocked, self.ran, self.trace = {}, set(), []
 
     def check(self, tool: str, args: dict[str, Any]) -> str | None:
         """Return None if the call may run, else a refusal message for the model."""
-        if tool not in WRITE_TOOLS:
-            return None
         intent = {k: v for k, v in args.items() if k != "session_id"}  # session ids are plumbing
+        status = self._decide(tool, intent)
+        self.trace.append({"tool": tool, "args": intent, "status": status})
+        if status == "already_done":
+            return ALREADY_DONE.format(tool=tool)
+        if status == "blocked":
+            self.blocked[tool] = args
+            return NEEDS_CONFIRMATION.format(tool=tool)
+        return None
+
+    def _decide(self, tool: str, intent: dict[str, Any]) -> str:
+        if tool not in WRITE_TOOLS:
+            return "read"
         call = f"{tool}:{json.dumps(intent, sort_keys=True, default=str)}"
         if call in self.ran:
             # Small models sometimes emit the same call twice in one turn; never write twice.
-            return ALREADY_DONE.format(tool=tool)
+            return "already_done"
         if tool in self.approved:
             self.approved.discard(tool)  # one call per approval
             self.ran.add(call)
-            return None
-        self.blocked[tool] = args
-        return NEEDS_CONFIRMATION.format(tool=tool)
+            return "ran"
+        return "blocked"
 
     def pending_summary(self) -> str:
         if not self.blocked:

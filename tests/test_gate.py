@@ -145,3 +145,18 @@ def test_claude_permission_callback_gates_writes_and_enforces_allowlist() -> Non
 
     runtime._spec = SPECS["sales"]  # department switch: same client, different allowlist
     assert isinstance(ask(mcp("get_invoice")), PermissionResultDeny)
+
+
+def test_trace_records_every_call_this_turn() -> None:
+    g = WriteGate()
+    g.start_turn("create an order")
+    g.check("get_customer", {"session_id": "s", "customer_id": 47})
+    g.check("create_order", {"customer_id": 47})
+    assert g.trace == [
+        {"tool": "get_customer", "args": {"customer_id": 47}, "status": "read"},
+        {"tool": "create_order", "args": {"customer_id": 47}, "status": "blocked"},
+    ]
+    g.start_turn("yes")
+    g.check("create_order", {"customer_id": 47})
+    g.check("create_order", {"customer_id": 47})
+    assert [c["status"] for c in g.trace] == ["ran", "already_done"]
