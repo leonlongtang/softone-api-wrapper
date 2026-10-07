@@ -12,3 +12,7 @@ __pycache__/
 
 # Personal notes vault (not part of the project)
 .obsidian/
+
+# Mock DB is seeded on first use
+mock_db/mock_softone.db
+*.egg-info/

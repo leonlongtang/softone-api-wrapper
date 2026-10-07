@@ -440,13 +440,11 @@ def _print_quickstart(result: SeedResult) -> None:
     print(json.dumps({"temporary_clientID": result.temporary_client_id, "final_clientID": result.final_client_id}, indent=2))
 
 
-def main() -> None:
-    DEFAULT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    if DEFAULT_DB_PATH.exists():
-        DEFAULT_DB_PATH.unlink()
-
-    conn = sqlite3.connect(DEFAULT_DB_PATH)
+def build_db(db_path: Path = DEFAULT_DB_PATH) -> SeedResult:
+    """(Re)create the mock DB at `db_path` with schema + seed data."""
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    db_path.unlink(missing_ok=True)
+    conn = sqlite3.connect(db_path)
     try:
         conn.row_factory = sqlite3.Row
         create_schema(conn)
@@ -454,8 +452,11 @@ def main() -> None:
         conn.commit()
     finally:
         conn.close()
+    return result
 
-    _print_quickstart(result)
+
+def main() -> None:
+    _print_quickstart(build_db())
 
 
 if __name__ == "__main__":

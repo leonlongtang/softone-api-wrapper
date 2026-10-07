@@ -23,6 +23,10 @@ class MockGateway(SoftOneGateway):
         self._handle_request = handle_request
         self._WsError = WsError
         self._db_path: Path = db_path if db_path is not None else DEFAULT_DB_PATH
+        if not self._db_path.exists():
+            from mock_db.create_and_seed import build_db
+
+            build_db(self._db_path)
 
     def call(self, *, base_url: str, payload: dict[str, Any]) -> dict[str, Any]:
         try:

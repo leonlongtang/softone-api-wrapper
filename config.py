@@ -60,10 +60,11 @@ def load_config() -> SoftOneAppConfig:
     mock = _env_bool("SOFTONE_MOCK", default=True)
 
     # Defaults match the seeded mock credentials.
-    base_url = os.getenv("SOFTONE_BASE_URL", "mock://")
-    username = os.getenv("SOFTONE_USERNAME", "john")
-    password = os.getenv("SOFTONE_PASSWORD", "aitis")
-    app_id = os.getenv("SOFTONE_APP_ID", "2001")
+    # `or` (not a getenv default) so blank values copied from .env.example still fall back.
+    base_url = os.getenv("SOFTONE_BASE_URL") or "mock://"
+    username = os.getenv("SOFTONE_USERNAME") or "john"
+    password = os.getenv("SOFTONE_PASSWORD") or "aitis"
+    app_id = os.getenv("SOFTONE_APP_ID") or "2001"
 
     return SoftOneAppConfig(
         mock=mock,

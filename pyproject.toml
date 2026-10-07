@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "softone-wrapper"
+name = "softone-agent-platform"
 version = "0.1.0"
-description = "SoftOne WS API wrapper (local project)"
+description = "Multi-agent LangGraph orchestrator over SoftOne ERP, exposed as MCP tools"
 requires-python = ">=3.10"
 dependencies = [
   "claude-agent-sdk",
@@ -9,8 +13,19 @@ dependencies = [
   "langchain-ollama",
   "langchain-mcp-adapters",
   "langgraph",
+  "mcp",
   "tomli; python_version < '3.11'",
 ]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools]
+packages = { find = { include = ["agent_platform*", "agent_core*", "softone_mcp*", "softone_wrapper*", "mock_db*"] } }
+py-modules = ["config"]
+
+[tool.setuptools.package-data]
+mock_db = ["schema.sql"]
 
 [tool.ruff]
 line-length = 110
