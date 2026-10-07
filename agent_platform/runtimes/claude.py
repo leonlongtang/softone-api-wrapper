@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any
 
 from claude_agent_sdk import (
     AssistantMessage,
@@ -26,103 +25,76 @@ from agent_platform.prompting import PromptPolicy, build_system_prompt
 from agent_platform.runtimes.base import RunContext, RuntimeAdapter
 from agent_platform.specs import AgentSpec
 
+SESSION_INSTRUCTION = (
+    "SESSION\n"
+    f"- Start by calling `{mcp_prefixed_tool_name(CONNECT_TOOL_NAME)}`.\n"
+    "- Capture the returned `session_id` and pass it to every subsequent tool call.\n"
+    "- If a tool returns ok:false with an auth/session error, stop and report it."
+)
+
 
 @dataclass
 class ClaudeSdkRuntime(RuntimeAdapter):
-    """Claude Agent SDK runtime adapter.
+    """Claude Agent SDK runtime.
 
-    Notes:
-    - The SDK manages its own MCP subprocess lifecycle.
-    - Session state (mock session store) lives inside that subprocess, so any
-      session_id created in another runtime is not portable here.
+    The SDK runs its own MCP subprocess, so Claude connects there itself (session ids
+    from the Ollama runtime aren't portable). Switching department rebuilds the client
+    with the new prompt and allowlist and resumes the same Claude conversation.
     """
 
     name: str = "claude"
     prompt_policy: PromptPolicy = field(default_factory=PromptPolicy)
 
-    model: str | None = None
-    fallback_model: str | None = None
-
-    _client_cm: Any | None = None
     _client: ClaudeSDKClient | None = None
+    _spec_name: str | None = None
+    _conversation_id: str | None = None
 
     def _options_for_spec(self, spec: AgentSpec) -> ClaudeAgentOptions:
-        model = (os.getenv("CLAUDE_MODEL") or "").strip() or self.model
-        fallback_model = (os.getenv("CLAUDE_FALLBACK_MODEL") or "").strip() or self.fallback_model
-
-        bad = [t for t in spec.tool_names if t.startswith("mcp__")]
-        if bad:
-            raise ValueError(
-                "AgentSpec.tool_names must contain raw MCP tool names (not Claude-prefixed names).\n"
-                f"- agent: {spec.name}\n"
-                f"- invalid: {bad}\n"
-            )
-
-        # Claude should connect inside its own MCP process.
-        session_instruction = (
-            "SESSION\n"
-            f"- Start by calling `{mcp_prefixed_tool_name(CONNECT_TOOL_NAME)}`.\n"
-            "- Capture the returned `session_id` and pass it to every subsequent tool call.\n"
-            "- If a tool returns ok:false with an auth/session error, stop and report it."
-        )
-        system_prompt = build_system_prompt(
-            base=spec.system_prompt,
-            session_instruction=session_instruction,
-            policy=self.prompt_policy,
-            extra_resource_uris=spec.resource_uris,
-        )
-
         params = mcp_server_params()
         return ClaudeAgentOptions(
             cwd=str(REPO_ROOT),
             mcp_servers={
                 MCP_SERVER_NAME: {"type": "stdio", "command": params["command"], "args": params["args"], "env": params["env"]}
             },
+            tools=[],  # no built-in Claude Code tools (Bash, Read, ...): MCP tools only
             allowed_tools=claude_allowed_tools_for_agent(spec.tool_names),
-            system_prompt=system_prompt,
-            model=model,
-            fallback_model=fallback_model,
+            system_prompt=build_system_prompt(
+                base=spec.system_prompt,
+                session_instruction=SESSION_INSTRUCTION,
+                policy=self.prompt_policy,
+                extra_resource_uris=spec.resource_uris,
+            ),
+            model=os.getenv("CLAUDE_MODEL", "").strip() or None,
+            fallback_model=os.getenv("CLAUDE_FALLBACK_MODEL", "").strip() or None,
+            resume=self._conversation_id,
         )
 
     async def __aenter__(self) -> ClaudeSdkRuntime:
-        # Lazy; we open per call to keep behavior explicit.
-        return self
+        return self  # the client is opened lazily on the first turn
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
-        if self._client_cm is not None:
-            await self._client_cm.__aexit__(exc_type, exc, tb)
-        self._client_cm = None
+        await self._close()
+
+    async def _close(self) -> None:
+        if self._client is not None:
+            await self._client.disconnect()
         self._client = None
 
-    async def _ensure_client(self, spec: AgentSpec) -> ClaudeSDKClient:
-        if self._client is not None:
-            return self._client
-        options = self._options_for_spec(spec)
-        self._client_cm = ClaudeSDKClient(options=options)
-        self._client = await self._client_cm.__aenter__()
-        return self._client
-
-    async def set_model(self, model: str) -> None:
-        """Switch model on the active client (interactive use)."""
-        if self._client is None:
-            self.model = model
-            return
-        await self._client.set_model(model)
-
     async def run_turn(self, *, spec: AgentSpec, user_text: str, context: RunContext) -> str:
-        client = await self._ensure_client(spec)
+        if self._client is None or self._spec_name != spec.name:
+            await self._close()
+            self._client = ClaudeSDKClient(options=self._options_for_spec(spec))
+            await self._client.connect()
+            self._spec_name = spec.name
 
-        chunks: list[str] = []
-        await client.query(user_text)
-        async for msg in client.receive_response():
+        texts: list[str] = []
+        result: str | None = None
+        await self._client.query(user_text)
+        async for msg in self._client.receive_response():
             if isinstance(msg, AssistantMessage):
-                for block in msg.content:
-                    if isinstance(block, TextBlock):  # tool-use blocks stay out of user-facing text
-                        chunks.append(block.text)
+                texts += [b.text for b in msg.content if isinstance(b, TextBlock)]  # tool-use blocks stay hidden
             elif isinstance(msg, ResultMessage):
-                # ResultMessage may contain a final short result string.
-                if msg.result:
-                    chunks.append(str(msg.result))
-
-        return "".join(chunks).strip()
-
+                self._conversation_id = msg.session_id
+                result = msg.result
+        # ResultMessage.result repeats the final assistant text; prefer it over joining every block.
+        return (result or "\n".join(texts)).strip()

@@ -1,63 +1,44 @@
+"""Deterministic keyword router: pick a department, or "clarify" when the request is ambiguous."""
+
 from __future__ import annotations
+
+import re
+
+DEPARTMENTS = ("sales", "inventory", "finance")
+
+FINANCE = {"invoice", "invoices", "payment", "payments", "pay", "paid", "unpaid", "refund", "receivable", "receivables"}
+INVENTORY = {"stock", "inventory", "item", "items", "sku", "warehouse", "catalog", "product", "products"}
+SALES = {"order", "orders", "customer", "customers", "quote", "sales"}
+
+MONEY_MOVES = {"payment", "payments", "pay", "paid", "unpaid", "refund"}
+ORDER_ACTIONS = {"create", "new", "place", "approve", "cancel"}
+STOCK_QUESTIONS = {"stock", "available", "availability", "warehouse"}
+
+CLARIFY_QUESTION = (
+    "Your request could belong to more than one department. Either rephrase it as one action, e.g.\n"
+    '- "Create an order for customer 47: 1x item 1001"\n'
+    '- "Check stock for item 1001"\n'
+    '- "Invoice order 5001"\n'
+    "or reply `sales`, `inventory` or `finance` to send your original request there."
+)
 
 
 def hybrid_route(user_text: str) -> str:
-    """Hybrid deterministic router.
+    """Return a department name, or "clarify" (caller asks CLARIFY_QUESTION and stops)."""
+    words = set(re.findall(r"[a-z]+", (user_text or "").lower()))
+    finance, inventory, sales = bool(words & FINANCE), bool(words & INVENTORY), bool(words & SALES)
 
-    - Routes to a department when signals are strong.
-    - Returns \"clarify\" when ambiguous (caller should ask a question and stop).
-    """
-    t = (user_text or "").lower().strip()
-    if not t:
-        return "clarify"
+    if finance + inventory + sales == 1:
+        return "finance" if finance else "inventory" if inventory else "sales"
 
-    finance = any(k in t for k in ("invoice", "invoices", "payment", "paid", "refund", "unpaid", "ar"))
-    inventory = any(k in t for k in ("stock", "inventory", "item", "items", "sku", "warehouse", "catalog"))
-    sales = any(k in t for k in ("order", "orders", "customer", "customers", "quote", "sales"))
-
-    # Strong single-signal cases.
-    if finance and not inventory and not sales:
-        return "finance"
-    if inventory and not finance and not sales:
-        return "inventory"
-    if sales and not finance and not inventory:
-        return "sales"
-
-    # Conflict resolution heuristics.
-    if finance and sales:
-        # If the user mentions unpaid/paid/payment/refund, prioritize finance.
-        if any(k in t for k in ("unpaid", "paid", "payment", "refund", "balance due", "receipt")):
+    if finance and not inventory:
+        if words & MONEY_MOVES or "invoice" in words:  # paying, or invoicing an order, is finance work
             return "finance"
-        # Otherwise, if they clearly want to create/modify an order, prioritize sales.
-        if any(k in t for k in ("create order", "new order", "approve order", "cancel order")):
+        if words & ORDER_ACTIONS:
             return "sales"
-        return "clarify"
-
-    if inventory and sales:
-        # Stock questions are usually inventory; order actions are usually sales.
-        if any(k in t for k in ("stock", "availability", "available", "warehouse")):
+    if inventory and sales and not finance:
+        if words & STOCK_QUESTIONS:
             return "inventory"
-        if any(k in t for k in ("create order", "approve order", "cancel order")):
+        if words & ORDER_ACTIONS:  # "create an order ... 2x item 1001"
             return "sales"
-        return "clarify"
-
-    if finance and inventory:
-        # Rare, but ambiguous without more info.
-        return "clarify"
-
-    # No strong signals.
     return "clarify"
-
-
-def clarify_question() -> str:
-    return (
-        "I can help, but your request is ambiguous.\n"
-        "Please clarify what you want to do (one sentence), for example:\n"
-        "- \"Create an order for customer ACME for 2x IT-CHAIR\"\n"
-        "- \"Check inventory for IT-DESK\"\n"
-        "- \"Invoice order 5001\"\n"
-        "\n"
-        "Reply with the exact action you want, plus any IDs/codes you already have."
-    )
-
-

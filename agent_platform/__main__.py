@@ -32,18 +32,16 @@ async def _chat(*, prompt: str, runtime: str, debug: bool) -> None:
     from agent_platform.runtimes.ollama import OllamaRuntime
 
     if runtime == "claude":
-        policy = RuntimePolicy(default_runtime="claude", escalation_runtime="claude")
-    elif os.getenv("ANTHROPIC_API_KEY", "").strip():
-        policy = RuntimePolicy()
+        policy = RuntimePolicy(default="claude", escalate_to=None)
     else:
-        policy = RuntimePolicy(escalation_runtime="ollama")  # no key: never escalate
+        policy = RuntimePolicy(escalate_to="claude" if os.getenv("ANTHROPIC_API_KEY", "").strip() else None)
 
     async with AsyncExitStack() as stack:
         claude = await stack.enter_async_context(ClaudeSdkRuntime())
         # --runtime claude never touches Ollama; the policy never picks the "ollama" slot.
         ollama = claude if runtime == "claude" else await stack.enter_async_context(OllamaRuntime(debug=debug))
         app = build_orchestrator(ollama=ollama, claude=claude, policy=policy)
-        state: OrchestratorState = {"failures": 0, "artifacts": {}}
+        state: OrchestratorState = {"artifacts": {}}
 
         async def turn(text: str) -> None:
             nonlocal state

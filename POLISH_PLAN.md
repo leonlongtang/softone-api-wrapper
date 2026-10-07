@@ -22,7 +22,7 @@ Branch `polish`, one commit per item, fast-forward merge on sign-off. This file 
       `simple_route`, `ToolMeta`; move `softone.md` to `docs/`; drop Obsidian wording and ignore line;
       `main.py` becomes a test; drop "V1/later" comments. Docs: regenerate the stale tools catalog from the
       live server (+ drift test), fix stale tool names, convert wiki-links.
-- [ ] **4. Real department routing.** Route -> sales/inventory/finance spec; delete `ops`, move workflow
+- [x] **4. Real department routing.** Route -> sales/inventory/finance spec; delete `ops`, move workflow
       tools to sales; a clarify reply of `sales|inventory|finance` sends the original text there; one shared
       conversation history across departments; Claude runtime rebuilds its client when the spec changes.
 - [ ] **5. Write-confirmation gate (code-enforced).** Write tools blocked until the user's next turn starts

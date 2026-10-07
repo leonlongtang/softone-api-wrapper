@@ -253,22 +253,19 @@ class OllamaRuntime(RuntimeAdapter):
             return
         raise RuntimeError("Startup connect failed (no session_id). Check SOFTONE_* configuration.")
 
-    def _build_system_message(self, *, spec: AgentSpec, session_id: str) -> Any:
-        from langchain_core.messages import SystemMessage
-
+    def _system_prompt(self, *, spec: AgentSpec, session_id: str) -> str:
         session_instruction = (
             "SESSION\n"
             "- A SoftOne session is already open. Use this exact session_id on every tool call:\n"
             f"    session_id = {session_id}\n"
             "- Never invent a different session_id. Never reconnect. If a tool returns an auth/session error, tell the user and stop."
         )
-        sys_prompt = build_system_prompt(
+        return build_system_prompt(
             base=spec.system_prompt,
             session_instruction=session_instruction,
             policy=self.prompt_policy,
             extra_resource_uris=spec.resource_uris,
         )
-        return SystemMessage(content=sys_prompt)
 
     def _business_tools_for_spec(self, spec: AgentSpec) -> list[Any]:
         if not self._raw_tools_by_name:
@@ -302,24 +299,24 @@ class OllamaRuntime(RuntimeAdapter):
         await self.ensure_connected(context)
         assert context.session_id
 
-        # Keep per-agent chat history in the shared context.
-        history_by_agent = context.artifacts.setdefault(HISTORY_KEY, {})
-        messages: list[Any] = history_by_agent.get(spec.name) or [self._build_system_message(spec=spec, session_id=context.session_id)]
-
-        tools = self._business_tools_for_spec(spec)
-        llm = ChatOllama(model=self.model)
-        agent = create_agent(llm, tools)
+        # One conversation shared by all departments, so a handoff (sales creates
+        # order 5003, then "invoice that order" goes to finance) keeps its context.
+        # Only the system prompt and tool allowlist change per department.
+        messages: list[Any] = context.artifacts.get(HISTORY_KEY) or []
+        agent = create_agent(
+            ChatOllama(model=self.model),
+            self._business_tools_for_spec(spec),
+            system_prompt=self._system_prompt(spec=spec, session_id=context.session_id),
+        )
 
         messages.append(HumanMessage(content=user_text))
         try:
             result = await agent.ainvoke({"messages": messages})
-            messages = result["messages"]
-            history_by_agent[spec.name] = messages
-            return str(messages[-1].content)
+            context.artifacts[HISTORY_KEY] = result["messages"]
+            return str(result["messages"][-1].content)
         except ToolError as te:
-            ask = _build_retry_question(tool_name=te.tool_name, error=te.error)
-            messages.append(AIMessage(content=ask))
-            history_by_agent[spec.name] = messages
+            messages.append(AIMessage(content=_build_retry_question(tool_name=te.tool_name, error=te.error)))
+            context.artifacts[HISTORY_KEY] = messages
             raise
         except Exception:
             if self.debug:
