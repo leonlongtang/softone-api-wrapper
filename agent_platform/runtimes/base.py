@@ -6,6 +6,11 @@ from typing import Any, Protocol
 from agent_platform.gate import WriteGate
 from agent_platform.specs import AgentSpec
 
+# Shared conversation history in RunContext.artifacts (a list of LangChain messages).
+HISTORY_KEY = "history"
+# ToolError code for malformed tool input: a model mistake, the one error worth escalating.
+BAD_TOOL_INPUT = "BAD_TOOL_INPUT"
+
 
 @dataclass(slots=True)
 class RunContext:

@@ -14,12 +14,11 @@ from typing import Any
 from agent_platform.gate import WriteGate
 from agent_platform.mcp_tools import CONNECT_TOOL_NAME, MCP_SERVER_NAME, mcp_server_params
 from agent_platform.prompting import PromptPolicy, build_system_prompt
-from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
+from agent_platform.runtimes.base import BAD_TOOL_INPUT, HISTORY_KEY, RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import AgentSpec
 
 logger = logging.getLogger(__name__)
 
-HISTORY_KEY = "ollama_history"
 DEFAULT_MODEL = "qwen2.5:7b"
 
 
@@ -124,7 +123,7 @@ def _wrap_tool(tool: Any, *, gate: WriteGate, debug: bool) -> Any:
                 raise ToolError(
                     tool_name=str(tool.name),
                     error={
-                        "code": "BAD_TOOL_INPUT",
+                        "code": BAD_TOOL_INPUT,
                         "message": str(exc),
                         "details": {"tool": str(tool.name)},
                     },

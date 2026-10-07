@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -28,6 +29,9 @@ from agent_platform.mcp_tools import (
 from agent_platform.prompting import PromptPolicy, build_system_prompt
 from agent_platform.runtimes.base import RunContext, RuntimeAdapter
 from agent_platform.specs import AgentSpec
+
+# Read tools are in allowed_tools on purpose (auto-approved); only writes need can_use_tool.
+warnings.filterwarnings("ignore", message="can_use_tool will not be invoked")
 
 SESSION_INSTRUCTION = (
     "SESSION\n"

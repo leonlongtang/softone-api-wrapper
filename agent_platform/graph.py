@@ -10,7 +10,7 @@ from langgraph.graph.state import StateGraph
 
 from agent_platform.gate import WriteGate
 from agent_platform.router import CLARIFY_QUESTION, DEPARTMENTS, hybrid_route
-from agent_platform.runtimes.base import RunContext, RuntimeAdapter, ToolError
+from agent_platform.runtimes.base import BAD_TOOL_INPUT, HISTORY_KEY, RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import SPECS, AgentSpec
 
 SESSION_ID_KEY = "session_id"
@@ -47,6 +47,13 @@ def _looks_like_session_error(err: dict) -> bool:
     return False
 
 
+def _transcript(artifacts: dict[str, Any], last: int = 8) -> str:
+    """Plain-text tail of the shared conversation (user and assistant turns only)."""
+    msgs = [m for m in artifacts.get(HISTORY_KEY) or [] if getattr(m, "type", "") in ("human", "ai") and m.content]
+    lines = [f"{'User' if m.type == 'human' else 'Assistant'}: {m.content}" for m in msgs[-last:]]
+    return "\n".join(lines) or "(none)"
+
+
 def build_orchestrator(
     *,
     ollama: RuntimeAdapter,
@@ -77,7 +84,7 @@ def build_orchestrator(
             artifacts[PENDING_USER_TEXT_KEY] = text
         return state
 
-    async def run(runtime_name: str, spec: AgentSpec, state: OrchestratorState) -> str:
+    async def run(runtime_name: str, spec: AgentSpec, state: OrchestratorState, text: str | None = None) -> str:
         runtime = claude if runtime_name == "claude" else ollama
         artifacts = state["artifacts"]
         # Only Ollama keeps a host-managed MCP session; Claude connects inside its own MCP subprocess.
@@ -89,11 +96,11 @@ def build_orchestrator(
         ensure_connected = getattr(runtime, "ensure_connected", None)
         if ensure_connected:
             await ensure_connected(ctx)
-        text = await runtime.run_turn(spec=spec, user_text=state.get("user_text") or "", context=ctx)
+        reply = await runtime.run_turn(spec=spec, user_text=text or state.get("user_text") or "", context=ctx)
         if runtime_name == "ollama" and ctx.session_id:
             artifacts[SESSION_ID_KEY] = ctx.session_id
         state["runtime"] = runtime_name
-        return text
+        return reply
 
     async def run_agent_node(state: OrchestratorState) -> OrchestratorState:
         if state["route"] == "clarify":
@@ -126,13 +133,20 @@ def build_orchestrator(
         msg += f"\nDetails: {details}" if details else ""
 
         escalate_to = policy.escalate_to
-        if escalate_to in (None, runtime_name):
+        # Only a model mistake (malformed tool input) is worth a stronger model. A business-rule
+        # error ("invoice needs a confirmed order") is the answer: relay it to the user.
+        if escalate_to in (None, runtime_name) or error.error.get("code") != BAD_TOOL_INPUT:
             state["runtime"] = runtime_name
             state["response"] = f"{msg}\n\nTell me how you want to adjust the inputs, and I'll retry."
             return state
         try:
-            # Escalation reruns the same request; Claude doesn't see the Ollama conversation.
-            state["response"] = await run(escalate_to, spec, state)
+            # Claude has its own MCP session and no memory of the local conversation: hand it the context.
+            handoff = (
+                f"A local model failed this request with a tool error: {msg}\n\n"
+                f"Recent conversation:\n{_transcript(state['artifacts'])}\n\n"
+                f"Latest user message: {state.get('user_text') or ''}"
+            )
+            state["response"] = await run(escalate_to, spec, state, text=handoff)
         except Exception as exc:  # noqa: BLE001 - report any escalation failure to the user
             state["runtime"] = runtime_name
             state["response"] = f"{msg}\n\nEscalation to {escalate_to} failed: {exc}"
