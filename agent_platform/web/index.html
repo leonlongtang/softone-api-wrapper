@@ -138,7 +138,8 @@ function add(node) { $("log").append(node); node.scrollIntoView({ block: "end" }
 function addError(text) { return add(el("div", "msg error", text)); }
 
 // Label ids with names from the current DB view, e.g. 1001 -> "1001 (Laptop 14 inch)".
-const NAMES = { item_id: ["items", "id"], product_id: ["items", "id"], customer_id: ["customers", "trdr"] };
+const NAMES = { item_id: ["items", "id"], product_id: ["items", "id"], item_name_or_id: ["items", "id"],
+  customer_id: ["customers", "trdr"], customer: ["customers", "trdr"] };
 function named(key, v) {
   const [table, pk] = NAMES[key] || [];
   const row = table && (db[table] || []).find((r) => r[pk] == v);
