@@ -38,6 +38,7 @@ class FakeRuntime(RuntimeAdapter):
     name: str
     fail: bool = False
     error_code: str = BAD_TOOL_INPUT
+    reply: str | None = None
     seen: list[str] = field(default_factory=list)
 
     async def ensure_connected(self, context: RunContext) -> None:
@@ -47,7 +48,7 @@ class FakeRuntime(RuntimeAdapter):
         self.seen.append(spec.name)
         if self.fail:
             raise ToolError(tool_name="create_order", error={"code": self.error_code, "message": "boom"})
-        return f"{spec.name}: {user_text}"
+        return f"{spec.name}: {user_text}" if self.reply is None else self.reply
 
 
 def _turn(app, state: dict, text: str) -> dict:
@@ -62,6 +63,21 @@ def test_routes_each_request_to_its_department() -> None:
         state = _turn(app, state, text)
     assert ollama.seen == ["sales", "inventory", "finance"]
     assert claude.seen == []
+
+
+def test_item_reply_mid_order_stays_with_sales() -> None:
+    ollama = FakeRuntime("ollama")
+    app = build_orchestrator(ollama=ollama, claude=FakeRuntime("claude"))
+    state: dict = {"artifacts": {}}
+    for text in ("create a new order for customer 50", "5 of item id 1002 and 7 of id 1005", "check stock for item 1002"):
+        state = _turn(app, state, text)
+    assert ollama.seen == ["sales", "sales", "inventory"]
+
+
+def test_blank_agent_reply_is_reported() -> None:
+    app = build_orchestrator(ollama=FakeRuntime("ollama", reply="  "), claude=FakeRuntime("claude"))
+    state = _turn(app, {"artifacts": {}}, "check stock for item 1001")
+    assert "no answer" in state["response"]
 
 
 def test_clarify_then_department_reply_runs_original_request() -> None:

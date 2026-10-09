@@ -11,7 +11,7 @@ from langgraph.constants import END, START
 from langgraph.graph.state import StateGraph
 
 from agent_platform.gate import WriteGate
-from agent_platform.router import CLARIFY_QUESTION, DEPARTMENTS, hybrid_route
+from agent_platform.router import CLARIFY_QUESTION, DEPARTMENTS, hybrid_route, is_item_detail
 from agent_platform.runtimes.base import BAD_TOOL_INPUT, HISTORY_KEY, RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import SPECS, AgentSpec
 
@@ -75,9 +75,11 @@ def build_orchestrator(
             # Reply to a clarify: send the original request to the chosen department.
             state["route"], state["user_text"] = text.lower(), pending
         else:
-            route = router(text)
+            route, last = router(text), artifacts.get(LAST_ROUTE_KEY)
+            if route == "inventory" and last == "sales" and is_item_detail(text):
+                route = "sales"  # "5 of item 1002" answers the sales agent's question
             # Follow-ups without department words ("yes", "47") stay with the current department.
-            state["route"] = artifacts.get(LAST_ROUTE_KEY, "clarify") if route == "unknown" else route
+            state["route"] = (last or "clarify") if route == "unknown" else route
 
         if state["route"] in DEPARTMENTS:
             artifacts[LAST_ROUTE_KEY] = state["route"]
@@ -108,6 +110,8 @@ def build_orchestrator(
         if state["route"] == "clarify":
             return state
         state = await run_with_recovery(state)
+        if not (state.get("response") or "").strip():
+            state["response"] = f"The {state['route']} agent returned no answer. Try rephrasing the request."
         # Show the exact blocked write calls ourselves rather than trusting the model's summary.
         if pending := state["artifacts"][GATE_KEY].pending_summary():
             state["response"] = f"{(state.get('response') or '').rstrip()}\n\n{pending}"

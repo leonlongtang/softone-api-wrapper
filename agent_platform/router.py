@@ -14,6 +14,9 @@ MONEY_MOVES = {"payment", "payments", "pay", "paid", "unpaid", "refund"}
 ORDER_ACTIONS = {"create", "new", "place", "approve", "cancel"}
 STOCK_QUESTIONS = {"stock", "available", "availability", "warehouse"}
 
+ITEM_WORDS = {"item", "items", "product", "products"}
+ITEM_CHANGES = {"create", "update", "adjust", "delete", "rename", "restock"}
+
 CLARIFY_QUESTION = (
     "Your request could belong to more than one department. Either rephrase it as one action, e.g.\n"
     '- "Create an order for customer 47: 1x item 1001"\n'
@@ -45,3 +48,10 @@ def hybrid_route(user_text: str) -> str:
         if words & ORDER_ACTIONS:  # "create an order ... 2x item 1001"
             return "sales"
     return "clarify"
+
+
+def is_item_detail(user_text: str) -> bool:
+    """Items named with no stock question or item edit, e.g. "5 of item 1002 and 7 of 1005".
+    Mid-order that answers the sales agent (which has the item lookup tools), not inventory."""
+    words = set(re.findall(r"[a-z]+", (user_text or "").lower()))
+    return bool(words & ITEM_WORDS) and not words & (INVENTORY - ITEM_WORDS) and not words & (STOCK_QUESTIONS | ITEM_CHANGES)
