@@ -8,9 +8,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <style>
 :root {
-  --bg: #f6f7f9; --panel: #fff; --text: #1c2330; --muted: #677285; --line: #e2e6ec;
-  --accent: #2f6fed; --accent-soft: #e8effd; --ok: #1d8a4e; --ok-soft: #e4f5ec;
-  --warn: #b26b00; --warn-soft: #fdf1dc; --bad: #c2352b; --bad-soft: #fde8e6; --hl: #fff6c9;
+  --bg: #f6f7f9; --panel: #fff; --text: #1c2330; --muted: #5d6779; --line: #e2e6ec;
+  --accent: #2563d9; --accent-soft: #e8effd; --ok: #177a43; --ok-soft: #e4f5ec;
+  --warn: #945a00; --warn-soft: #fdf1dc; --bad: #c2352b; --bad-soft: #fde8e6; --hl: #fff6c9;
+  --on-accent: #fff; --on-ok: #fff;
   --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -18,8 +19,10 @@
     --bg: #12151b; --panel: #1a1f27; --text: #e4e8ef; --muted: #8d97a8; --line: #2b323d;
     --accent: #6c9cff; --accent-soft: #1f2b44; --ok: #4cc283; --ok-soft: #173326;
     --warn: #f0b250; --warn-soft: #3a2c12; --bad: #ff7b70; --bad-soft: #3d1c1a; --hl: #3b3615;
+    --on-accent: #0d1526; --on-ok: #08261a;
   }
 }
+@media (prefers-reduced-motion: reduce) { #busy::before { animation: none; } }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -44,7 +47,7 @@ main.nodb { grid-template-columns: minmax(0, 1fr); }
 #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .msg { max-width: 92%; padding: 10px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line);
   overflow-wrap: anywhere; }
-.msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-color: transparent; white-space: pre-wrap; }
+.msg.user { align-self: flex-end; background: var(--accent); color: var(--on-accent); border-color: transparent; white-space: pre-wrap; }
 .msg.error { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
 .msg .body > :first-child { margin-top: 0; } .msg .body > :last-child { margin-bottom: 0; }
 .msg table { border-collapse: collapse; margin: 6px 0; }
@@ -58,28 +61,48 @@ main.nodb { grid-template-columns: minmax(0, 1fr); }
 .box li { padding: 1px 0; }
 .st { display: inline-block; min-width: 92px; }
 .st.read { color: var(--muted); } .st.ran { color: var(--ok); } .st.blocked { color: var(--warn); } .st.already_done { color: var(--muted); }
-.ins { color: var(--ok); } .del { color: var(--bad); } .upd { color: var(--accent); }
+.ins { color: var(--ok); } .del { color: var(--bad); } .upd { color: var(--warn); }
+.box details summary { cursor: pointer; color: var(--muted); font-family: var(--mono); }
+.pending { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--warn); border-radius: 8px; background: var(--warn-soft); }
+.pending.done { border-color: var(--line); background: var(--panel); }
+.pending h4 { margin: 0 0 6px; font-size: 14px; }
+.pending h4 span { color: var(--warn); font-weight: 500; }
+.pending.done h4 span { color: var(--muted); }
+.pending h4:not(:first-child) { margin-top: 10px; }
+.pending dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+.pending dt { color: var(--muted); } .pending dd { margin: 0; }
 .approve { display: flex; gap: 8px; margin-top: 10px; }
-.approve .yes { background: var(--ok); color: #fff; border-color: var(--ok); }
+.approve .yes { background: var(--ok); color: var(--on-ok); border-color: var(--ok); }
 .approve .no { color: var(--bad); }
-#examples { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 8px; }
+#intro { margin: auto; max-width: 560px; text-align: center; color: var(--muted); }
+#intro p { margin: 0 0 12px; }
+#examples { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 #examples button { font-size: 12px; border-radius: 99px; color: var(--muted); }
 form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--panel); }
 textarea { flex: 1; resize: none; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line);
   border-radius: 8px; padding: 8px 10px; height: 40px; }
-form button { background: var(--accent); color: #fff; border-color: var(--accent); padding: 0 16px; }
+form button { background: var(--accent); color: var(--on-accent); border-color: var(--accent); padding: 0 16px; }
 #busy { padding: 0 16px 8px; color: var(--muted); font-size: 12px; display: none; }
 #busy.on { display: block; }
 #busy::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%;
   border: 2px solid var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; vertical-align: -1px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 #side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
-#tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
+.tabbar { display: flex; align-items: center; gap: 8px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
+#tabs { flex: 1; display: flex; flex-wrap: wrap; gap: 2px; }
+#reset { font-size: 12px; margin-bottom: 6px; }
 #tabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); padding: 6px 10px; }
 #tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
 #tabs .n { margin-left: 4px; font-size: 11px; background: var(--hl); color: var(--text); padding: 0 6px; border-radius: 99px; }
 #view { flex: 1; overflow: auto; padding: 12px; }
-#view table { border-collapse: collapse; width: 100%; font-size: 12px; font-family: var(--mono); }
+#view table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+#view .nm { color: var(--muted); }
+.pill { display: inline-block; padding: 0 8px; border-radius: 99px; font-size: 12px; background: var(--bg); color: var(--muted);
+  border: 1px solid var(--line); }
+.pill:is(.confirmed, .paid, .unpaid, .partial, .cancelled) { border-color: transparent; }
+.pill.confirmed, .pill.paid { background: var(--ok-soft); color: var(--ok); }
+.pill.unpaid, .pill.partial { background: var(--warn-soft); color: var(--warn); }
+.pill.cancelled { background: var(--bad-soft); color: var(--bad); }
 #view th { position: sticky; top: -12px; background: var(--panel); text-align: left; color: var(--muted); font-weight: 500; }
 #view th, #view td { padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 #view tr.hl td { background: var(--hl); }
@@ -96,19 +119,22 @@ form button { background: var(--accent); color: #fff; border-color: var(--accent
 <header>
   <h1>SoftOne Agents <span>· sales / inventory / finance</span></h1>
   <label>Runtime <select id="runtime"><option value="ollama">Ollama (local)</option><option value="claude">Claude</option></select></label>
-  <span id="esc" class="badge off">escalation off</span>
+  <span id="esc" class="badge off">No Claude backup</span>
   <button id="new">New chat</button>
-  <button id="reset" title="Recreate the mock database from its seed data and start a new chat">Reset DB</button>
 </header>
 <main id="main">
   <section id="chat">
-    <div id="log"></div>
-    <div id="busy"></div>
-    <div id="examples"></div>
-    <form id="form"><textarea id="input" placeholder="Ask the agents… (Enter to send)"></textarea><button>Send</button></form>
+    <div id="log" aria-live="polite">
+      <div id="intro"><p>Ask the sales, inventory or finance agent. Writes wait for your approval.</p><div id="examples"></div></div>
+    </div>
+    <div id="busy" role="status"></div>
+    <form id="form"><textarea id="input" aria-label="Message" placeholder="Ask the agents… (Enter to send)"></textarea><button>Send</button></form>
   </section>
   <section id="side">
-    <nav id="tabs"></nav>
+    <div class="tabbar">
+      <nav id="tabs"></nav>
+      <button id="reset" title="Recreate the mock database from its seed data and start a new chat">Reset DB</button>
+    </div>
     <div id="view"></div>
   </section>
 </main>
@@ -134,30 +160,60 @@ function markdown(text) {
   return d;
 }
 
-function add(node) { $("log").append(node); node.scrollIntoView({ block: "end" }); $("examples").hidden = true; return node; }
-function addError(text) { return add(el("div", "msg error", text)); }
+function add(node) { $("log").append(node); node.scrollIntoView({ block: "end" }); $("intro").hidden = true; return node; }
+function addError(text, detail) { const m = add(el("div", "msg error", text)); if (detail) m.title = String(detail); return m; }
+const OFFLINE = "Can't reach the server. Is python -m agent_platform.web still running?";
 
-// Label ids with names from the current DB view, e.g. 1001 -> "1001 (Laptop 14 inch)".
+// Label ids with names from the current DB view, e.g. 1001 -> "1001 · Laptop 14 inch".
 const NAMES = { item_id: ["items", "id"], product_id: ["items", "id"], item_name_or_id: ["items", "id"],
   customer_id: ["customers", "trdr"], customer: ["customers", "trdr"] };
-function named(key, v) {
+function nameOf(key, v) {
   const [table, pk] = NAMES[key] || [];
   const row = table && (db[table] || []).find((r) => r[pk] == v);
-  return row ? `${v} (${row.name})` : v;
+  return row ? row.name : null;
 }
-function annotate(x) {
-  if (Array.isArray(x)) return x.map(annotate);
-  if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, typeof v === "object" ? annotate(v) : named(k, v)]));
-  return x;
+function named(key, v) { const n = nameOf(key, v); return n ? `${v} · ${n}` : v; }
+
+// Tool args as "key=value" text instead of JSON.
+function fmt(v, key) {
+  if (Array.isArray(v)) return `[${v.map((x) => fmt(x, key)).join(", ")}]`;
+  if (v && typeof v === "object") return Object.entries(v).map(([k, x]) => `${k}=${fmt(x, k)}`).join(" ");
+  return String(named(key, v));
 }
 
 function short(row) {
   return Object.entries(row || {}).filter(([k]) => k !== "created_at").map(([k, v]) => `${k}=${named(k, v)}`).join(" ");
 }
 
+const LABELS = { orders: "Orders", order_items: "Order lines", invoices_business: "Invoices", payments: "Payments",
+  items: "Items", customers: "Customers", tools: "Tools", customer: "Customer", customer_id: "Customer",
+  item_id: "Item", product_id: "Item", item_name_or_id: "Item" };
+const label = (k) => LABELS[k] || k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+
+// One array element of a write, e.g. an order line -> "1001 · Laptop 14 inch × 2".
+function argLine(o) {
+  const qty = o.qty ?? o.quantity, keys = Object.keys(o).filter((k) => k !== "qty" && k !== "quantity");
+  return qty != null && keys.length === 1 ? `${named(keys[0], o[keys[0]])} × ${qty}` : fmt(o);
+}
+
+function pendingCard(calls) {
+  const card = el("div", "pending");
+  for (const t of calls) {
+    const h = el("h4", null, label(t.tool.replace(/^workflow_/, ""))); h.append(el("span", null, " · waiting for your approval"));
+    const dl = el("dl");
+    for (const [k, v] of Object.entries(t.args || {})) {
+      const vals = Array.isArray(v) ? v.map((x) => (x && typeof x === "object" ? argLine(x) : named(k, x)))
+        : [v && typeof v === "object" ? fmt(v) : named(k, v)];
+      vals.forEach((x, i) => dl.append(el("dt", null, i ? "" : label(k)), el("dd", null, x)));
+    }
+    card.append(h, dl);
+  }
+  return card;
+}
+
 function diffBox(diff) {
+  if (!diff.length) return null;
   const box = el("div", "box"); box.append(el("h4", null, "Database changes"));
-  if (!diff.length) { box.append(el("div", null, "none")); return box; }
   const ul = el("ul");
   for (const c of diff) {
     const key = `${c.table} #${c.key.join("/")}`;
@@ -168,29 +224,37 @@ function diffBox(diff) {
   box.append(ul); return box;
 }
 
-function traceBox(trace) {
+// Reads fold into "N reads"; a write awaiting approval is shown in its own card instead.
+function traceBox(trace, pending) {
+  const reads = trace.filter((t) => t.status === "read");
+  const rest = trace.filter((t) => t.status !== "read" && !(pending && t.status === "blocked"));
+  if (!reads.length && !rest.length) return null;
   const box = el("div", "box"); box.append(el("h4", null, "Tool calls"));
-  if (!trace.length) { box.append(el("div", null, "none")); return box; }
-  const ul = el("ul");
-  for (const t of trace) {
-    const li = el("li"); li.append(el("span", `st ${t.status}`, STATUS[t.status] || t.status), `${t.tool}(${JSON.stringify(annotate(t.args))})`);
-    ul.append(li);
+  const list = (calls) => {
+    const ul = el("ul");
+    for (const t of calls) { const li = el("li"); li.append(el("span", `st ${t.status}`, STATUS[t.status] || t.status), `${t.tool}(${fmt(t.args)})`); ul.append(li); }
+    return ul;
+  };
+  if (rest.length) box.append(list(rest));
+  if (reads.length) {
+    const d = el("details"); d.append(el("summary", null, `${reads.length} read${reads.length > 1 ? "s" : ""}`), list(reads)); box.append(d);
   }
-  box.append(ul); return box;
+  return box;
 }
 
 function agentMessage(r) {
   const m = el("div", "msg");
   const meta = el("div", "meta"); meta.append(el("span", "badge", r.route), el("span", "badge off", r.runtime)); m.append(meta);
   m.append(markdown(r.response));
-  if (r.trace) m.append(traceBox(r.trace));
-  if (r.diff) m.append(diffBox(r.diff));
   if (r.pending) {
+    const blocked = (r.trace || []).filter((t) => t.status === "blocked");
+    if (blocked.length) m.append(pendingCard(blocked));
     const row = el("div", "approve");
     const yes = el("button", "yes", "Approve"), no = el("button", "no", "Reject");
     yes.onclick = () => send("yes"); no.onclick = () => send("no");
     row.append(yes, no); m.append(row);
   }
+  for (const box of [r.trace && traceBox(r.trace, r.pending), r.diff && diffBox(r.diff)]) if (box) m.append(box);
   return m;
 }
 
@@ -206,34 +270,44 @@ function setBusy(on) {
 async function send(text) {
   text = text.trim(); if (!text || busy) return;
   document.querySelectorAll(".approve").forEach((a) => a.remove());  // an answer is final
+  const verdict = { yes: "approved", no: "rejected" }[text.toLowerCase()] || "answered";
+  document.querySelectorAll(".pending:not(.done)").forEach((p) => {
+    p.classList.add("done"); p.querySelectorAll("h4 span").forEach((s) => (s.textContent = ` · ${verdict}`));
+  });
   add(el("div", "msg user", text)); $("input").value = "";
   setBusy(true);
   try {
     const r = await api("/api/turn", { text });
     if (r.error && !r.response) addError(r.error); else add(agentMessage(r));
     if (r.diff) { lastDiff = r.diff; const t = r.diff.find((c) => c.op !== "delete"); if (t) tab = t.table; }
-  } catch (e) { addError(`Request failed: ${e}`); }
+  } catch (e) { addError(OFFLINE, e); }
   setBusy(false);
   await loadDb();
 }
 
 async function newChat(note) {
   setBusy(true);
-  $("log").replaceChildren(); $("examples").hidden = false; lastDiff = [];
-  const r = await api("/api/chat", { runtime: $("runtime").value });
-  if (r.error) addError(`Could not start ${$("runtime").value}: ${r.error}`);
-  else if (note) add(el("div", "msg", note));
+  const intro = $("intro"); $("log").replaceChildren(intro); intro.hidden = false; lastDiff = [];
+  try {
+    const r = await api("/api/chat", { runtime: $("runtime").value });
+    if (r.error) addError(`Could not start ${$("runtime").value}: ${r.error}`);
+    else if (note) $("log").prepend(el("div", "msg", note));  // above the intro, which stays up
+  } catch (e) { addError(OFFLINE, e); }
   setBusy(false);
   await loadDb();
 }
 
-async function loadDb() { if (info.mock) { db = await api("/api/db"); render(); } else render(); }
+async function loadDb() {
+  if (info.mock) { try { db = await api("/api/db"); } catch { /* keep the last view; the chat shows the error */ } }
+  render();
+}
 
 function render() {
   const tabs = $("tabs"); tabs.replaceChildren();
   const names = info.mock ? [...TABLES, "tools"] : ["tools"];
   for (const name of names) {
-    const b = el("button", name === tab ? "active" : "", name === "tools" ? "Tools" : name);
+    const b = el("button", name === tab ? "active" : "", label(name));
+    b.setAttribute("aria-pressed", name === tab);
     const n = lastDiff.filter((c) => c.table === name).length;
     if (n) b.append(el("span", "n", n));
     b.onclick = () => { tab = name; render(); };
@@ -251,7 +325,12 @@ function render() {
   for (const row of rows) {
     const tr = el("tr"), hit = changed.get(JSON.stringify(row));
     if (hit) tr.className = "hl";
-    cols.forEach((c) => tr.append(el("td", hit && hit.includes(c) ? "chg" : "", row[c] ?? "")));
+    for (const c of cols) {
+      const td = el("td", hit && hit.includes(c) ? "chg" : ""), v = row[c] ?? "", n = nameOf(c, v);
+      if (c === "status" && v) td.append(el("span", `pill ${String(v).toLowerCase()}`, v));
+      else { td.append(String(v)); if (n) td.append(el("span", "nm", ` · ${n}`)); }
+      tr.append(td);
+    }
     table.append(tr);
   }
   view.append(table);
@@ -273,14 +352,25 @@ function renderTools(view) {
 $("form").onsubmit = (e) => { e.preventDefault(); send($("input").value); };
 $("input").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send($("input").value); } };
 $("new").onclick = () => newChat();
-$("runtime").onchange = () => newChat($("runtime").value === "claude" ? "Claude runtime: every turn is a paid API call." : null);
-$("reset").onclick = async () => { setBusy(true); await api("/api/reset", {}); setBusy(false); await newChat("Database reset to seed data."); };
+let runtime = "";
+$("runtime").onchange = () => {
+  if ($("log").querySelector(".msg.user") && !confirm("Switching runtime starts a new chat. The current conversation will be cleared.")) {
+    $("runtime").value = runtime; return;
+  }
+  runtime = $("runtime").value;
+  newChat(runtime === "claude" ? "Claude runtime: every turn is a paid API call." : null);
+};
+$("reset").onclick = async () => {
+  setBusy(true);
+  try { await api("/api/reset", {}); } catch (e) { setBusy(false); addError(OFFLINE, e); return; }
+  setBusy(false); await newChat("Database reset to seed data.");
+};
 for (const x of EXAMPLES) { const b = el("button", null, x); b.onclick = () => send(x); $("examples").append(b); }
 
 (async () => {
-  info = await api("/api/info");
-  $("runtime").value = info.runtime;
-  $("esc").textContent = info.escalation ? "escalation to Claude: on" : "escalation off";
+  try { info = await api("/api/info"); } catch (e) { addError(OFFLINE, e); return; }
+  $("runtime").value = runtime = info.runtime;
+  $("esc").textContent = info.escalation ? "Claude backup: on" : "No Claude backup";
   $("esc").className = info.escalation ? "badge on" : "badge off";
   $("esc").title = info.escalation ? "ANTHROPIC_API_KEY is set: a failed Ollama tool call is rerun on Claude (paid)." : "No ANTHROPIC_API_KEY: Ollama only.";
   if (!info.mock) { $("main").classList.add("nodb"); $("reset").hidden = true; tab = "tools"; }
