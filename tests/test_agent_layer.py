@@ -74,6 +74,41 @@ def test_item_reply_mid_order_stays_with_sales() -> None:
     assert ollama.seen == ["sales", "sales", "inventory"]
 
 
+@pytest.mark.parametrize(
+    ("turns", "routes"),
+    [
+        (["list unpaid invoices", "only the ones for customer 47"], ["finance", "finance"]),
+        (["record a payment of 100 for invoice 3", "no, make it for order 5002"], ["finance", "finance"]),
+        (["list unpaid invoices", "approve order 5001"], ["finance", "sales"]),  # an order action still hands off
+        (["check stock for item 1001", "how many are reserved by orders?"], ["inventory", "inventory"]),
+        (["create an order for customer 47", "adjust stock for item 1002 by 5"], ["sales", "inventory"]),
+    ],
+)
+def test_follow_up_detail_stays_with_department(turns: list[str], routes: list[str]) -> None:
+    ollama = FakeRuntime("ollama")
+    app = build_orchestrator(ollama=ollama, claude=FakeRuntime("claude"))
+    state: dict = {"artifacts": {}}
+    for text in turns:
+        state = _turn(app, state, text)
+    assert ollama.seen == routes
+
+
+def test_clarify_reply_naming_a_department_runs_original_request() -> None:
+    ollama = FakeRuntime("ollama")
+    app = build_orchestrator(ollama=ollama, claude=FakeRuntime("claude"))
+    state = _turn(app, {"artifacts": {}}, "orders and invoices for customer 47")
+    state = _turn(app, state, "sales please")
+    assert state["response"] == "sales: orders and invoices for customer 47"
+
+
+def test_clarify_then_rephrased_request_runs_the_new_text() -> None:
+    ollama = FakeRuntime("ollama")
+    app = build_orchestrator(ollama=ollama, claude=FakeRuntime("claude"))
+    state = _turn(app, {"artifacts": {}}, "orders and invoices for customer 47")
+    state = _turn(app, state, "check inventory for item 1001")
+    assert state["response"] == "inventory: check inventory for item 1001"
+
+
 def test_blank_agent_reply_is_reported() -> None:
     app = build_orchestrator(ollama=FakeRuntime("ollama", reply="  "), claude=FakeRuntime("claude"))
     state = _turn(app, {"artifacts": {}}, "check stock for item 1001")

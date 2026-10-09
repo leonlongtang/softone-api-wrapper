@@ -7,15 +7,22 @@ import re
 DEPARTMENTS = ("sales", "inventory", "finance")
 
 FINANCE = {"invoice", "invoices", "payment", "payments", "pay", "paid", "unpaid", "refund", "receivable", "receivables"}
-INVENTORY = {"stock", "inventory", "item", "items", "sku", "warehouse", "catalog", "product", "products"}
+INVENTORY = {"stock", "inventory", "item", "items", "sku", "warehouse", "catalog", "product", "products", "reserved"}
 SALES = {"order", "orders", "customer", "customers", "quote", "sales"}
 
 MONEY_MOVES = {"payment", "payments", "pay", "paid", "unpaid", "refund"}
 ORDER_ACTIONS = {"create", "new", "place", "approve", "cancel"}
-STOCK_QUESTIONS = {"stock", "available", "availability", "warehouse"}
+STOCK_QUESTIONS = {"stock", "available", "availability", "warehouse", "reserved"}
 
-ITEM_WORDS = {"item", "items", "product", "products"}
 ITEM_CHANGES = {"create", "update", "adjust", "delete", "rename", "restock"}
+
+# Mid-conversation, naming something the current department's own tools can look up is detail
+# for that department, not a new request: sales has the item tools, finance has get_order/list_orders.
+# The words after each set are actions that do start a new request in the other department.
+FOLLOW_UP_DETAIL = {
+    "sales": ({"item", "items", "product", "products"}, STOCK_QUESTIONS | ITEM_CHANGES),
+    "finance": ({"order", "orders", "customer", "customers"}, ORDER_ACTIONS),
+}
 
 CLARIFY_QUESTION = (
     "Your request could belong to more than one department. Either rephrase it as one action, e.g.\n"
@@ -50,8 +57,20 @@ def hybrid_route(user_text: str) -> str:
     return "clarify"
 
 
-def is_item_detail(user_text: str) -> bool:
-    """Items named with no stock question or item edit, e.g. "5 of item 1002 and 7 of 1005".
-    Mid-order that answers the sales agent (which has the item lookup tools), not inventory."""
+def is_follow_up_detail(user_text: str, current: str | None) -> bool:
+    """True when the message only names things `current` can look up, with no action that starts
+    a new request: "5 of item 1002" mid-order (sales), "only the ones for customer 47" (finance)."""
+    nouns, actions = FOLLOW_UP_DETAIL.get(current or "", (set(), set()))
     words = set(re.findall(r"[a-z]+", (user_text or "").lower()))
-    return bool(words & ITEM_WORDS) and not words & (INVENTORY - ITEM_WORDS) and not words & (STOCK_QUESTIONS | ITEM_CHANGES)
+    signal = words & (FINANCE | INVENTORY | SALES)
+    return bool(signal) and signal <= nouns and not words & actions
+
+
+def named_department(user_text: str) -> str | None:
+    """The one department a reply names ("sales please", "send it to finance"), else None.
+    A rephrased request ("check inventory for item 1001") has other signals and isn't a choice."""
+    words = set(re.findall(r"[a-z]+", (user_text or "").lower()))
+    named = [d for d in DEPARTMENTS if d in words]
+    if len(named) != 1 or (words & (FINANCE | INVENTORY | SALES)) - {named[0]}:
+        return None
+    return named[0]

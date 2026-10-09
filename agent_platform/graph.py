@@ -11,7 +11,7 @@ from langgraph.constants import END, START
 from langgraph.graph.state import StateGraph
 
 from agent_platform.gate import WriteGate
-from agent_platform.router import CLARIFY_QUESTION, DEPARTMENTS, hybrid_route, is_item_detail
+from agent_platform.router import CLARIFY_QUESTION, DEPARTMENTS, hybrid_route, is_follow_up_detail, named_department
 from agent_platform.runtimes.base import BAD_TOOL_INPUT, HISTORY_KEY, RunContext, RuntimeAdapter, ToolError
 from agent_platform.specs import SPECS, AgentSpec
 
@@ -71,13 +71,13 @@ def build_orchestrator(
         artifacts.setdefault(GATE_KEY, WriteGate()).start_turn(text)
         pending = artifacts.pop(PENDING_USER_TEXT_KEY, None)
 
-        if pending and text.lower() in DEPARTMENTS:
-            # Reply to a clarify: send the original request to the chosen department.
-            state["route"], state["user_text"] = text.lower(), pending
+        if pending and (chosen := named_department(text)):
+            # Reply to a clarify ("sales", "sales please"): send the original request there.
+            state["route"], state["user_text"] = chosen, pending
         else:
             route, last = router(text), artifacts.get(LAST_ROUTE_KEY)
-            if route == "inventory" and last == "sales" and is_item_detail(text):
-                route = "sales"  # "5 of item 1002" answers the sales agent's question
+            if route != last and is_follow_up_detail(text, last):
+                route = last  # "5 of item 1002" mid-order answers the sales agent, not inventory
             # Follow-ups without department words ("yes", "47") stay with the current department.
             state["route"] = (last or "clarify") if route == "unknown" else route
 
