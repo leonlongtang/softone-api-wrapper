@@ -168,3 +168,6 @@ def test_department_specs_reference_real_mcp_tools() -> None:
     for spec in SPECS.values():
         assert set(spec.tool_names) <= real, spec.name
     assert {"workflow_create_order", "workflow_order_to_cash"} <= set(SPECS["sales"].tool_names)
+    # The router keeps "customer 47" follow-ups with finance, so finance must be able to read customers (only read).
+    finance = set(SPECS["finance"].tool_names)
+    assert "get_customer" in finance and not finance & {"create_customer", "update_customer", "delete_customer"}
