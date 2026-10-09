@@ -9,7 +9,7 @@ to Claude.
 
 ```mermaid
 flowchart LR
-    U([You]) --> R{Router}
+    U(["You<br/>(web UI or CLI)"]) --> R{Router}
     R -- "ambiguous" --> Q[Clarify question]
     R -- "sales / inventory / finance" --> A["Department agent<br/>prompt + tool allowlist"]
     A --> O["Ollama<br/>(local, default)"]
@@ -22,13 +22,26 @@ flowchart LR
 
 ## Demo
 
-A real, unedited run on the mock ERP (`--runtime claude`; only your typed lines are inserted and a Claude CLI
-login notice removed). Every write is blocked and shown verbatim until you say yes; "Invoice that order" is
-routed to finance, which still knows it means order 5006.
+![Web UI: the sales agent's order waits for approval; the database pane on the right](docs/images/web-ui-approval.png)
 
-**Fully local works too.** The same six-turn script on Ollama with `qwen2.5:7b` passed 3 out of 3 runs, checked
-against the database: order 5006 confirmed, one $1,250 invoice, no duplicate writes. That was on a laptop with a
-GTX 1650 (4 GB) and 8 GB RAM, at about 5½ minutes per run.
+A real run of the web UI on Ollama (`qwen2.5:7b`, Claude backup off). The sales agent's `workflow_create_order`
+call is blocked, and the page shows exactly what it would write. Nothing in the database has changed yet.
+
+![After "yes": the tool call ran, the rows it wrote are listed under the reply and highlighted on the right](docs/images/web-ui-approved.png)
+
+After **Approve**, the same call runs once. Its trace and the rows it inserted and updated (order 5006, two order
+lines, reserved stock) appear under the reply and are highlighted in the database pane. Each turn took about a
+minute on the test laptop (65 s and 47 s).
+
+**The full order-to-cash flow, locally.** A six-turn script (order, approve, invoice) on Ollama with `qwen2.5:7b` passed 3 out of 3 runs,
+checked against the database: order 5006 confirmed, one $1,250 invoice, no duplicate writes. That was on a laptop
+with a GTX 1650 (4 GB) and 8 GB RAM, at about 5½ minutes per run.
+
+<details>
+<summary>The same order-to-cash flow in the terminal (a real, unedited run with <code>--runtime claude</code>)</summary>
+
+Only your typed lines are inserted and a Claude CLI login notice removed. Every write is blocked and shown
+verbatim until you say yes; "Invoice that order" is routed to finance, which still knows it means order 5006.
 
 ```text
 You: Create an order for customer 47: 1x item 1001 and 2x item 1002
@@ -133,6 +146,8 @@ You: yes
 Inventory has been deducted for the ordered items. The invoice is now issued and awaiting payment.
 ```
 
+</details>
+
 ## Quickstart
 
 Runs entirely on a seeded mock ERP: no SoftOne account and no API key needed.
@@ -140,10 +155,11 @@ Runs entirely on a seeded mock ERP: no SoftOne account and no API key needed.
 ```bash
 git clone https://github.com/leonlongtang/softone-api-wrapper && cd softone-api-wrapper
 uv sync                          # or: python -m venv .venv && pip install -e . pytest
-uv run pytest -q                 # 128 tests, ~3s, no LLM needed
+uv run pytest -q                 # 141 tests, ~3s, no LLM needed
 
 ollama pull qwen2.5:7b           # tested default (4.7 GB); other tool-calling models: set OLLAMA_MODEL
-uv run python -m agent_platform                                   # chat
+uv run python -m agent_platform.web                               # web UI: http://127.0.0.1:8000
+uv run python -m agent_platform                                   # terminal chat
 uv run python -m agent_platform "List unpaid invoices for customer 47"   # one turn
 uv run python -m agent_platform --runtime claude "..."            # Claude only (needs ANTHROPIC_API_KEY)
 ```
@@ -160,7 +176,8 @@ trying via `OLLAMA_MODEL`.
 | Term | Meaning |
 |---|---|
 | **Department agent** | `sales`, `inventory` or `finance`: a system prompt plus an allowlist of MCP tools ([`specs.py`](agent_platform/specs.py)). |
-| **Route** | The router's decision per turn: a department, or *clarify* when signals conflict ([`router.py`](agent_platform/router.py)). Follow-ups like "yes" stay with the current department. |
+| **Route** | The router's decision per turn: a department, or *clarify* when signals conflict ([`router.py`](agent_platform/router.py)). Follow-ups stay with the current department: "yes", and details it can look up itself ("5 of item 1002" mid-order stays with sales). |
+| **Turn diff** | The rows a turn inserted, updated or deleted in the 6 business tables, shown under each reply in the web UI ([`web/db.py`](agent_platform/web/db.py)). |
 | **Runtime** | The model backend running an agent: Ollama or the Claude Agent SDK ([`runtimes/`](agent_platform/runtimes)). |
 | **Escalation** | A turn whose tool call fails on Ollama is rerun on Claude, if a key is set ([`graph.py`](agent_platform/graph.py)). |
 
@@ -170,7 +187,7 @@ Ollama's tool wrapper and Claude's `can_use_tool` both enforce it, and a test fa
 neither a known write nor read-named.
 
 ```
-agent_platform/   router, graph, department specs, write gate, Ollama + Claude runtimes, CLI
+agent_platform/   router, graph, department specs, write gate, Ollama + Claude runtimes, CLI, web UI
 softone_mcp/      MCP server: 34 business tools + resources, one {ok, data | error, meta} envelope
 softone_wrapper/  typed SoftOne WS client (two-step login, getData/setData/...), HTTP or mock gateway
 mock_db/          SQLite-backed imitation of the SoftOne WS API, seeded on first use

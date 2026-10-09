@@ -101,6 +101,10 @@ def create_app(*, open_chat: Callable[..., Any] = open_orchestrator, db_path: Pa
             gate = chat["state"]["artifacts"].get(GATE_KEY)
             out["trace"] = gate.trace if gate else []
             out["pending"] = bool(gate and gate.blocked)
+            # The page shows blocked calls as an approval card; drop the CLI's text version of them.
+            summary = gate.pending_summary() if gate else ""
+            if summary and out.get("response", "").endswith(summary):
+                out["response"] = out["response"][: -len(summary)].rstrip()
             out["diff"] = db.diff(before, db.snapshot(db_path)) if mock else None
         return JSONResponse(out)
 

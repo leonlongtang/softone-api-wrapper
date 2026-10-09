@@ -56,7 +56,8 @@ class FakeOrchestrator:
         if gate.check("create_order", {"customer_id": 47}) is None:
             with closing(sqlite3.connect(self.db)) as conn, conn:  # commit, then close (Windows locks open files)
                 conn.execute("INSERT INTO orders (id, customer_id, status, total) VALUES (5006, 47, 'Draft', 0)")
-        return {**state, "route": "sales", "runtime": "fake", "response": "done"}
+        response = f"done\n\n{gate.pending_summary()}" if gate.blocked else "done"  # as graph.run_agent_node does
+        return {**state, "route": "sales", "runtime": "fake", "response": response}
 
 
 def test_api_turns_report_trace_pending_and_diff(tmp_path: Path) -> None:
@@ -73,6 +74,7 @@ def test_api_turns_report_trace_pending_and_diff(tmp_path: Path) -> None:
 
         first = client.post("/api/turn", json={"text": "create an order"}).json()
         assert first["pending"] and first["diff"] == []
+        assert first["response"] == "done"  # the page's approval card replaces the CLI's "Needs your approval" text
         assert first["trace"] == [{"tool": "create_order", "args": {"customer_id": 47}, "status": "blocked"}]
 
         second = client.post("/api/turn", json={"text": "yes"}).json()
